@@ -1,7 +1,7 @@
 # PingRoom MCP — complete tool reference
 
 Generated from the live `tools/list` of https://api.pingroom.io/api/agent/mcp
-(27 tools). Regenerate by POSTing `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
+(38 tools). Regenerate by POSTing `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
 to that endpoint. Every tool call is `tools/call`; in Claude Code the tools
 surface as `mcp__pingroom__<name>` (load schemas with ToolSearch
 "select:mcp__pingroom__<name>" before first use).
@@ -108,7 +108,7 @@ List a bounded page of recent pings across approved rooms, newest first. Use pag
   - `type` (string) — one of: `received`, `sent`. Narrow to pings you received or pings you sent. Omit for both.
   - `date` (string). Only pings created on this calendar date, e.g. "2026-08-25".
   - `limit` (integer) — 1–25. Pings per page. Defaults to 10; maximum 25.
-  - `page` (integer) — 1. Page number, newest first.
+  - `page` (integer) — 1–. Page number, newest first.
 
 ## get_notification  [RI]
 
@@ -140,7 +140,7 @@ Ask the human to approve or reject an action, then block on their answer (pair w
   - `options` (array) — ≤4 items. Answers to choose between. Defaults to ["approve","deny"].
   - `correlation_id` (string) — ≤255 chars. Your own id, echoed back unchanged on read.
   - `data` (object). Arbitrary structured context, returned on reads after connector privacy filtering. Do not put secrets in data.
-  - `ttl` (integer) — 1. Seconds the request stays open before it expires.
+  - `ttl` (integer) — 1–. Seconds the request stays open before it expires.
 
 ## wait_for_approval  [RI]
 
@@ -174,7 +174,7 @@ Ask a person a question with 2-4 tappable options, then block on their answer (p
       - `data.location.longitude` (number). Longitude in decimal degrees.
       - `data.location.label` (string). Optional place name shown to the recipient.
       - `data.location.address` (string). Optional formatted street address.
-  - `ttl` (integer) — 1. Seconds the question stays open before it expires.
+  - `ttl` (integer) — 1–. Seconds the question stays open before it expires.
   - `attachment_ids` (array) — ≤4 items. Ids of up to 4 uploaded attachments (see upload_attachment) to include. Uploading requires a Pro account.
 
 ## wait_for_answer  [RI]
@@ -196,7 +196,7 @@ List a bounded page of questions you asked, newest first. Optionally filter by s
 
   - `state` (string) — one of: `pending`, `answered`, `expired`, `cancelled`, `all`. Filter by state. Omit for all.
   - `limit` (integer) — 1–25. Questions per page. Defaults to 10; maximum 25.
-  - `page` (integer) — 1. Page number, newest first.
+  - `page` (integer) — 1–. Page number, newest first.
 
 ## cancel_question  [DI]
 
@@ -246,7 +246,7 @@ List a bounded page of this agent's Handoffs, newest first. Omit state (or use o
 
   - `state` (string) — one of: `open`, `all`. Filter to open Handoffs or include all states.
   - `limit` (integer) — 1–25. Handoffs per page. Defaults to 10; maximum 25.
-  - `page` (integer) — 1. Page number, newest first.
+  - `page` (integer) — 1–. Page number, newest first.
 
 ## upload_attachment  [–]
 
@@ -267,3 +267,104 @@ Fetch an attachment visible to this agent as base64 content plus metadata. Resul
 Delete an attachment this agent uploaded that is not yet claimed by a ping.
 
   - `attachment_id` (string) **(required)**. Attachment id returned by upload_attachment.
+
+## get_room  [RI]
+
+Fetch a single room by its invite code, including members and quick actions.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+
+## create_room  [–]
+
+Create a new room owned by the authenticated account. Free accounts may own up to five rooms.
+
+  - `name` (string) **(required)** — ≤24 chars. Room display name.
+  - `icon` (string) **(required)**. Emoji or icon id.
+  - `color` (string) **(required)**. Hex color, e.g. "#e33122".
+
+## create_public_room  [–]
+
+Create a publicly discoverable room with a unique @handle. Counts toward the free-plan five-room cap.
+
+  - `name` (string) **(required)** — ≤24 chars. Room display name.
+  - `icon` (string) **(required)**. Emoji or icon id.
+  - `color` (string) **(required)**. Hex color, e.g. "#e33122".
+  - `handle` (string) **(required)**. Globally unique @handle (vanity URL): lowercase letters, digits, underscores.
+  - `description` (string) — ≤120 chars. Short room description shown in public discovery.
+  - `category` (string) — ≤100 chars. Discovery category.
+  - `show_owner` (boolean). Whether the owner is shown publicly. Defaults to true.
+
+## join_room  [DI]
+
+Join a room using its invite code. Include the password only if the room is protected.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+  - `password` (string). Only required for password-protected rooms.
+
+## list_webhooks  [RI]
+
+List the incoming webhooks (with their trigger URLs) for a room the account owns.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+
+## create_webhook  [–]
+
+Create an incoming webhook for a room the account owns. The bound account must be Pro. Returns the secret trigger URL — treat it as a credential.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+  - `name` (string) **(required)** — ≤100 chars. Webhook name (shown to the owner).
+  - `title` (string) — ≤40 chars. Optional push title used when the webhook fires.
+  - `message` (string) — ≤160 chars. Optional default push body (max 120 characters in private rooms, 160 in public rooms).
+  - `icon` (string). A v3 room-icon catalog id, e.g. "bell". Call list_room_icons to discover the valid ids.
+  - `color` (string). Hex color, e.g. "#e33122".
+  - `sound` (string). Canonical sound id, e.g. "ting". Omit for the room default.
+  - `action_number` (integer) — 1–4. Quick-action slot to attribute fires to. Auto-assigned if omitted.
+  - `enabled` (boolean). Whether the webhook is active. Defaults to true.
+  - `cooldown_seconds` (integer) — 0–60. Minimum seconds between fires. Defaults to 5.
+
+## update_webhook  [D]
+
+Update an incoming webhook (by id) on a room the account owns — e.g. change its icon, title, message, or sound.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+  - `webhook_id` (string) **(required)**. Webhook id (from list_webhooks or create_webhook).
+  - `name` (string) — ≤100 chars. Webhook name (shown to the owner).
+  - `title` (string) — ≤40 chars. Push title used when the webhook fires.
+  - `message` (string) — ≤160 chars. Default push body (max 120 characters in private rooms, 160 in public rooms).
+  - `icon` (string). A v3 room-icon catalog id, e.g. "bell". Call list_room_icons to discover the valid ids.
+  - `color` (string). Hex color, e.g. "#e33122".
+  - `sound` (string). Canonical sound id, e.g. "ting".
+  - `action_number` (integer) — 1–4. Quick-action slot to attribute fires to.
+  - `enabled` (boolean). Whether the webhook is active.
+  - `cooldown_seconds` (integer) — 0–60. Minimum seconds between fires.
+  - `regenerate_secret` (boolean). Rotate the secret trigger URL.
+
+## delete_webhook  [DI]
+
+Delete an incoming webhook (by id) from a room the account owns.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+  - `webhook_id` (string) **(required)**. Webhook id (from list_webhooks or create_webhook).
+
+## update_quick_action  [DI]
+
+Configure a numbered quick-action slot for a room the account owns.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+  - `action_number` (integer) **(required)** — 1–4. Quick-action slot number (1–4).
+  - `label` (string) **(required)** — ≤255 chars. Button label.
+  - `icon` (string) **(required)**. Emoji or icon id.
+  - `sound` (string). Canonical sound id, e.g. "ting". Omit for the room default.
+  - `requires_ack` (boolean). Whether pings from this action remain open until one eligible recipient acknowledges them.
+
+## set_avatar  [DI]
+
+Set this agent's avatar. Must be one of the PingRoom bot avatars.
+
+  - `avatar_id` (string) **(required)**. Bot avatar id, e.g. "bots-3".
+
+## rotate_handle  [D]
+
+Rotate this agent's public handle — kill-switch for a leaked handle.
+
+  (no arguments)
