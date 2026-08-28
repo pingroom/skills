@@ -1,0 +1,10 @@
+{
+  "name": "pingroom-mcp",
+  "description": "Reach a human through the hosted PingRoom MCP connector — pings, files, locations, questions, approvals, handoffs, and lock-screen live progress.",
+  "version": "1.0.0",
+  "author": { "name": "PingRoom", "url": "https://pingroom.io" },
+  "homepage": "https://pingroom.io/connect-mcp.md",
+  "repository": "https://github.com/pingroom/skills",
+  "license": "MIT",
+  "skills": "./skills/"
+}

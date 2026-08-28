@@ -1,0 +1,33 @@
+{
+  "$schema": "https://code.claude.com/schemas/marketplace.json",
+  "name": "pingroom",
+  "owner": {
+    "name": "PingRoom",
+    "url": "https://pingroom.io"
+  },
+  "metadata": {
+    "description": "Skills that teach an agent how to reach a human through PingRoom — pings, files, locations, questions, approvals, handoffs, and lock-screen live progress."
+  },
+  "plugins": [
+    {
+      "name": "pingroom-mcp",
+      "source": "./mcp",
+      "description": "Reach a human from a conversational session over the hosted PingRoom MCP connector: send pings with locations, links, structured data and small attachments; ask a question and block on the answer; gate an action on an approval; hand a decision to your authorizing human; drive a lock-screen live-progress card. Includes a full tool reference generated from the live tools/list.",
+      "homepage": "https://pingroom.io/connect-mcp.md",
+      "repository": "https://github.com/pingroom/skills",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": ["pingroom", "mcp", "notifications", "human-in-the-loop", "approvals", "questions"]
+    },
+    {
+      "name": "pingroom-cli",
+      "source": "./cli",
+      "description": "Reach a human from a shell, a CI pipeline, or a Claude Code hook with the @pingroom/cli: attachments up to 5 MiB, human answers as exit codes a script can branch on, and room, webhook and quick-action management.",
+      "homepage": "https://www.npmjs.com/package/@pingroom/cli",
+      "repository": "https://github.com/pingroom/skills",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": ["pingroom", "cli", "ci", "hooks", "notifications", "human-in-the-loop"]
+    }
+  ]
+}

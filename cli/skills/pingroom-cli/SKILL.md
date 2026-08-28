@@ -180,6 +180,13 @@ ready-to-paste settings block.
 Plain shell everywhere else — the CLI is the contract. Webhook mode when the
 pipeline should hold no account credential at all.
 
+## Installing these skills elsewhere
+
+`pingroom skills` lists both published skills and every way to install them;
+`pingroom skills install` copies them into `~/.claude/skills` (needs `git`).
+It refuses to replace a skill that is already installed — pass `--force` for
+that, or `--dir <path>` to install somewhere else. Requires CLI >= 0.8.0.
+
 ## Troubleshooting
 
 - `an agent token is required` → not paired here: run bare `pingroom`
@@ -191,3 +198,6 @@ pipeline should hold no account credential at all.
 - Exit 3 after `--wait` → the human never answered in time. Treat as "no".
 - Config lives in `~/.pingroom/` (`PINGROOM_HOME` overrides); `pingroom config
   list` shows it; `pingroom logout` forgets the credential.
+- An "@pingroom/cli X is available" line on stderr is the once-a-day update
+  notice, not an error. It never changes stdout or the exit code, and is already
+  suppressed in CI; `PINGROOM_NO_UPDATE_CHECK=1` silences it everywhere.
