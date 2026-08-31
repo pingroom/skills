@@ -3,8 +3,10 @@
 Generated from the live `tools/list` of https://api.pingroom.io/api/agent/mcp
 (38 tools). Regenerate by POSTing `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
 to that endpoint. Every tool call is `tools/call`; in Claude Code the tools
-surface as `mcp__pingroom__<name>` (load schemas with ToolSearch
-"select:mcp__pingroom__<name>" before first use).
+surface as `mcp__pingroom__<name>` when the server was added directly, or as
+`mcp__plugin_pingroom_mcp_pingroom__<name>` when it came from the PingRoom
+plugin (load schemas with ToolSearch "select:<the name your session lists>"
+before first use).
 
 Annotations: R = read-only, D = destructive, I = idempotent.
 

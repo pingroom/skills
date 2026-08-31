@@ -42,6 +42,11 @@ gates on them:
 if pingroom approval -p "Ship v2 to production?" --wait; then deploy; fi
 ```
 
+`approval` is the only command where the *value* decides the exit code: an
+answered question exits 0, but an answered APPROVAL exits 0 only on `approve`
+and 4 on `deny`. That is what makes the one-liner above a real gate rather
+than a prompt everyone passes.
+
 ## Sending pings
 
 ```bash
@@ -197,7 +202,16 @@ that, or `--dir <path>` to install somewhere else. Requires CLI >= 0.8.0.
   instead of retrying.
 - Exit 3 after `--wait` → the human never answered in time. Treat as "no".
 - Config lives in `~/.pingroom/` (`PINGROOM_HOME` overrides); `pingroom config
-  list` shows it; `pingroom logout` forgets the credential.
+  list` shows it.
+- `insufficient_scope` → the credential was approved before the CLI needed that
+  permission. `pingroom reconnect` re-approves with the current set: the old
+  connection keeps working until the new one is approved, and cancelling
+  changes nothing. It then revokes the old one, so any other machine or CI job
+  sharing that credential stops working — it refuses outright when
+  `PINGROOM_TOKEN` is set, rather than revoking a token it did not issue.
+- `pingroom logout` is LOCAL ONLY: it unlinks `~/.pingroom/credentials.json`
+  and leaves the connection active on the server. To replace a connection use
+  `reconnect`; to end one, revoke it under Connected Agents in the app.
 - An "@pingroom/cli X is available" line on stderr is the once-a-day update
   notice, not an error. It never changes stdout or the exit code, and is already
   suppressed in CI; `PINGROOM_NO_UPDATE_CHECK=1` silences it everywhere.

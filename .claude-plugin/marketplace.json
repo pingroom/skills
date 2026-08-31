@@ -12,12 +12,19 @@
     {
       "name": "pingroom-mcp",
       "source": "./mcp",
-      "description": "Reach a human from a conversational session over the hosted PingRoom MCP connector: send pings with locations, links, structured data and small attachments; ask a question and block on the answer; gate an action on an approval; hand a decision to your authorizing human; drive a lock-screen live-progress card. Includes a full tool reference generated from the live tools/list.",
+      "description": "Reach a human from a conversational session over the hosted PingRoom MCP connector: send pings with locations, links, structured data and small attachments; ask a question and block on the answer; gate an action on an approval; hand a decision to your authorizing human; drive a lock-screen live-progress card. Installing it wires up the MCP server as well as the skill — you authenticate once via /mcp. Includes a full tool reference generated from the live tools/list.",
       "homepage": "https://pingroom.io/connect-mcp.md",
       "repository": "https://github.com/pingroom/skills",
       "license": "MIT",
       "category": "productivity",
-      "keywords": ["pingroom", "mcp", "notifications", "human-in-the-loop", "approvals", "questions"]
+      "keywords": [
+        "pingroom",
+        "mcp",
+        "notifications",
+        "human-in-the-loop",
+        "approvals",
+        "questions"
+      ]
     },
     {
       "name": "pingroom-cli",
@@ -27,7 +34,14 @@
       "repository": "https://github.com/pingroom/skills",
       "license": "MIT",
       "category": "productivity",
-      "keywords": ["pingroom", "cli", "ci", "hooks", "notifications", "human-in-the-loop"]
+      "keywords": [
+        "pingroom",
+        "cli",
+        "ci",
+        "hooks",
+        "notifications",
+        "human-in-the-loop"
+      ]
     }
   ]
 }

@@ -19,10 +19,15 @@ description: >-
 
 PingRoom turns "the agent finished / needs input" into an event on a person's
 phone: a push they feel, a card on their lock screen, a question they answer
-with one tap. You reach it over MCP (`mcp__pingroom__*` tools); a paired
-`pingroom` CLI may also be available for what MCP doesn't carry.
+with one tap. You reach it over MCP; a paired `pingroom` CLI may also be
+available for what MCP doesn't carry.
 
-Read `references/tools.md` for the full 27-tool schema reference when you need
+Tool names depend on how the server was added. A server added directly is
+`mcp__pingroom__<name>`; one installed as part of the PingRoom plugin is
+`mcp__plugin_pingroom_mcp_pingroom__<name>`. Match whichever your session
+lists — this file names tools bare (`ask_question`, not the prefixed form).
+
+Read `references/tools.md` for the full 38-tool schema reference when you need
 exact parameters. This file teaches you which tool to reach for and the rules
 that make the difference between "sent" and "landed".
 
@@ -37,11 +42,22 @@ the loop, then block on its wait tool:
 |---|---|---|---|
 | Someone to see + confirm | `broadcast` with `requires_ack: true` | `wait_for_ack` | acked / expired |
 | A choice among 2–4 options | `ask_question` | `wait_for_answer` | answered / expired / cancelled |
-| Permission before acting | `request_approval` | `wait_for_approval` | approved / denied / expired |
+| Permission before acting | `ask_question` (2 options) | `wait_for_answer` | answered / expired / cancelled |
 | Your authorizing human, privately | `create_handoff` | `wait_for_handoff` | acked or answered / expired |
 
 Pending, timeout, enqueued, and delivery states are **not** answers. If a wait
 expires, say so plainly and do not proceed as if consent was given.
+
+**A wait tool holds for at most ~30 seconds and then returns `pending`.** That
+is the contract, not a failure: call it again. Loop until you see a terminal
+state or you hit a deadline you set yourself, and pass an `idempotency_key` on
+the create so a retried call cannot put a second card on someone's phone.
+
+**PingRoom blocks an agent that is still running; it cannot revive one that has
+stopped.** If your task ends while a question is open, the human's answer is
+still recorded and readable later with `get_question` — but nothing wakes you
+to act on it. So only open a gate you intend to stay alive for, and say plainly
+that you stopped waiting rather than implying the decision was made.
 
 ## Picking a room
 
@@ -134,13 +150,25 @@ back to the CLI, and mention that reconnecting the MCP connector with the
   two questions.
 
 ### Approvals
-`request_approval { invite_code, prompt, context?, ttl? }` is the deploy-gate
-primitive: a dedicated approve/deny card. Block with `wait_for_approval` and
-branch on `approved` / `denied` / `expired` — treat `expired` as "no", never
-as "probably fine".
+`request_approval { invite_code, question (≤500), title? (≤40), options?,
+correlation_id?, data?, ttl?, idempotency_key? }` — note `question`/`title`,
+NOT the `prompt`/`context` that questions use.
+
+Block with `wait_for_approval`, then read TWO fields: `status` is
+`pending | decided | expired | cancelled`, and the human's choice is in a
+separate `decision` (`approve` / `deny` by default). There is no `approved` or
+`denied` status — a `decided` status with `decision: "deny"` is a refusal, and
+treating "the human answered" as success is how a gate fails open. Treat
+`expired` as "no", never as "probably fine".
+
+**Prefer `ask_question` for deploy gates.** An approval is delivered as an
+ordinary ping with no answer actions, so the human has to open the app to
+decide it; a two-option question (`approve`/`deny`) reaches the lock screen
+with real buttons and is answerable in one tap. Reach for `request_approval`
+only when you specifically need the legacy approvals surface.
 
 ### Handoffs (your authorizing human, privately)
-`create_handoff { kind: "ack"|"question", prompt, audience: { type: "user",
+`create_handoff { kind: "ack"|"question", prompt, audience: { type: "direct",
 user_id: "me" }, options? (question only), urgency?, expires_in? }` reaches
 the one human who authorized this agent — a private loop no room member sees.
 Use it when the decision belongs to *your* human specifically, not to a room.
