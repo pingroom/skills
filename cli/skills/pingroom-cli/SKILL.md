@@ -183,10 +183,23 @@ ready-to-paste settings block.
 ## CI patterns
 
 ```yaml
-# GitHub Actions — the published action wraps this CLI
+# GitHub Actions — the published action wraps this CLI.
+# Webhook mode carries no account credential and needs no room: the URL is
+# already room-scoped.
 - uses: pingroom/cli@v0
-  with: { message: "CI failed on ${{ github.ref_name }}", urgent: true }
-  env: { PINGROOM_TOKEN: ${{ secrets.PINGROOM_TOKEN }} }
+  with:
+    webhook-url: ${{ secrets.PINGROOM_WEBHOOK_URL }}
+    message: "CI failed on ${{ github.ref_name }}"
+    urgent: 'true'
+
+# Token mode addresses a room explicitly. `room` is REQUIRED here — a token
+# with no room exits 2, and CI has no `config set default_room` to fall back on.
+- uses: pingroom/cli@v0
+  with:
+    token: ${{ secrets.PINGROOM_TOKEN }}
+    room: ${{ secrets.PINGROOM_ROOM }}
+    message: "CI failed on ${{ github.ref_name }}"
+    urgent: 'true'
 ```
 
 Plain shell everywhere else — the CLI is the contract. Webhook mode when the

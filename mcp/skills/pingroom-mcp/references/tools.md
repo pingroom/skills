@@ -143,6 +143,7 @@ Ask the human to approve or reject an action, then block on their answer (pair w
   - `correlation_id` (string) — ≤255 chars. Your own id, echoed back unchanged on read.
   - `data` (object). Arbitrary structured context, returned on reads after connector privacy filtering. Do not put secrets in data.
   - `ttl` (integer) — 1–. Seconds the request stays open before it expires.
+  - `idempotency_key` (string) — ≤255 chars. Stable key so a retried call cannot create a second one.
 
 ## wait_for_approval  [RI]
 
@@ -178,6 +179,7 @@ Ask a person a question with 2-4 tappable options, then block on their answer (p
       - `data.location.address` (string). Optional formatted street address.
   - `ttl` (integer) — 1–. Seconds the question stays open before it expires.
   - `attachment_ids` (array) — ≤4 items. Ids of up to 4 uploaded attachments (see upload_attachment) to include. Uploading requires a Pro account.
+  - `idempotency_key` (string) — ≤255 chars. Stable key so a retried call cannot create a second one.
 
 ## wait_for_answer  [RI]
 

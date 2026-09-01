@@ -219,9 +219,12 @@ also the only send that works in personal rooms. `is_urgent`/`requires_ack`
 elevate a single press without changing the saved configuration.
 
 ### Reading the room
-- `list_notifications { invite_code?, limit?, page? }` /
+- `list_notifications { type?, date?, limit?, page? }` /
   `get_notification { notification_id }` — history, including `data`,
-  `correlation_id`, attachments, and ack state.
+  `correlation_id`, attachments, and ack state. It spans every approved room;
+  there is no `invite_code` filter, and sending one is rejected outright
+  (`arguments.invite_code is not an advertised argument`). `type` narrows to
+  `received` or `sent`; `date` to one calendar day.
 - `wait_for_notification { after? }` — long-poll for *new* pings. Without
   `after` it returns no history, just the current head cursor: call once to
   get the cursor, then poll with it. Your own sends are excluded.
