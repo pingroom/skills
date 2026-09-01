@@ -22,7 +22,7 @@ List the quick actions configured for a room.
 
   - `invite_code` (string) **(required)**. Room invite code.
 
-## trigger_quick_action  [D]
+## trigger_quick_action  [–]
 
 Press a room quick action, notifying its members. Rate-limited.
 
@@ -32,7 +32,7 @@ Press a room quick action, notifying its members. Rate-limited.
   - `is_urgent` (boolean). Deliver this one press time-sensitive so it breaks through Focus / Do Not Disturb. Send-time only — the action's saved configuration is unchanged.
   - `requires_ack` (boolean). Keep this one press open until an eligible recipient acknowledges it. Send-time only and elevating only: true adds the acknowledgement to an action that has none, false never disables the action's stored ack policy.
 
-## broadcast  [D]
+## broadcast  [–]
 
 Send a custom ping to a room the account belongs to. Rate-limited. Not available in personal rooms (use trigger_quick_action there).
 
@@ -57,7 +57,7 @@ Send a custom ping to a room the account belongs to. Rate-limited. Not available
   - `ack_timeout_seconds` (integer) — 60–86400. Optional acknowledgement deadline in seconds.
   - `attachment_ids` (array) — ≤4 items. Ids of up to 4 uploaded attachments (see upload_attachment) to include. Uploading requires a Pro account.
 
-## live_status  [DI]
+## live_status  [I]
 
 Start, update, or end a live progress card on the room members' lock screen (an iOS Live Activity / Android live update). Reuse the same correlation_id for every ping of one stream: the first ping starts the card and sends one alert, further "running" pings move it silently, and the first "done"/"failed" sends one completion alert and ends it. Free accounts get a small number of NEW streams per day; updates and the final ping are never charged.
 
@@ -132,7 +132,7 @@ Long-poll a generic acknowledgement-required ping until an eligible recipient ac
   - `notification_id` (string) **(required)**. Room notification id.
   - `timeout` (integer) — 0–30. Seconds to hold the request open. Use 0 for an immediate authoritative state read.
 
-## request_approval  [D]
+## request_approval  [–]
 
 Ask the human to approve or reject an action, then block on their answer (pair with wait_for_approval). Delivered as a push to the user. Rate-limited.
 
@@ -157,7 +157,7 @@ Fetch the current status of an approval request without blocking.
 
   - `approval_id` (string) **(required)**. Approval request id.
 
-## ask_question  [D]
+## ask_question  [–]
 
 Ask a person a question with 2-4 tappable options, then block on their answer (pair with wait_for_answer). Delivered as a push they can answer from the lock screen or in-app; the first valid answer wins. Rate-limited.
 
@@ -206,13 +206,13 @@ Withdraw a still-pending question you asked.
 
   - `question_id` (string) **(required)**. Question id.
 
-## activate_agent_inbox  [D]
+## activate_agent_inbox  [–]
 
 Start or resume the onboarding Question in the private room the human chose during authorization. Read question.id, then call wait_for_handoff only while state is pending and within a bounded local deadline. Success is answered with activation_completed true. Any other terminal result is incomplete: stop polling that attempt, then call activate_agent_inbox again for one numbered retry. The stamp requires native phone receipt before the human answer.
 
   (no arguments)
 
-## create_handoff  [D]
+## create_handoff  [–]
 
 Hand work to exactly one human as either an acknowledgement or a tappable question. The server verifies that one of the recipient's current devices supports the complete Handoff action before creating anything.
 

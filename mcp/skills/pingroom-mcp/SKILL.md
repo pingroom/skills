@@ -66,8 +66,9 @@ Call `list_rooms` first (cache the result for the conversation). Rules:
 - Personal rooms (`type: "personal"`) refuse `broadcast` — use
   `trigger_quick_action` there.
 - Public rooms allow 160-char messages; private rooms 120. Titles cap at 40.
-- Sends into single-member rooms are refused (`validation_failed`) — a ping
-  needs a recipient other than the sender.
+- A standard private room with one member self-delivers manual sends, which is
+  useful for setup and agent-owned rooms. A one-member public room still
+  refuses sends because its fan-out has no targeted fallback.
 - If the user names a room ambiguously, match on name case-insensitively; when
   several match, ask which one rather than guessing.
 
@@ -223,7 +224,7 @@ on the code, don't retry blindly:
 | `room_not_granted` | Room is outside this agent's grant. Ask the human to add it under Connected Agents, or pick a granted room. |
 | `insufficient_scope` / `invalid_credential` | The token predates the permission or has the wrong audience. Reconnect the connector (or use the CLI, which holds its own credential). |
 | `attachment_too_large` | Over the MCP result cap — use `pingroom attachment get <id> --out …`. |
-| `validation_failed` | Read the message; commonly a single-member room or a length cap. |
+| `validation_failed` | Read the message; commonly a public room with no other member, an unsupported room type, or a length cap. |
 | `quota_exceeded` / HTTP 429 | Back off; respect Retry-After. Never hot-loop a wait tool — they long-poll server-side already. |
 
 A tool being listed does not mean this token may call it: `tools/list` is a
