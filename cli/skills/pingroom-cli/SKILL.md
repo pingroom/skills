@@ -153,6 +153,7 @@ pingroom webhooks delete <id> --room CODE
 
 pingroom actions list --room CODE
 pingroom actions set 3 --room CODE --label "Deploy done" --icon 🚀 --require-ack
+pingroom actions set 4 --room CODE --label "" --icon 🔥   # emoji-only Ping (title optional)
 pingroom actions trigger 3 --room CODE
 
 pingroom attachment get <id> --out report.md    # binary-safe download

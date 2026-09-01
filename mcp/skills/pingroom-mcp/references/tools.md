@@ -354,7 +354,7 @@ Configure a numbered quick-action slot for a room the account owns.
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `action_number` (integer) **(required)** — 1–4. Quick-action slot number (1–4).
-  - `label` (string) **(required)** — ≤255 chars. Button label.
+  - `label` (string) **(required)** — ≤255 chars. Button label. Must be sent, but may be empty (`""`) — a Ping can be named by its emoji alone, and clients render an untitled one as just the emoji.
   - `icon` (string) **(required)**. Emoji or icon id.
   - `sound` (string). Canonical sound id, e.g. "ting". Omit for the room default.
   - `requires_ack` (boolean). Whether pings from this action remain open until one eligible recipient acknowledges them.
