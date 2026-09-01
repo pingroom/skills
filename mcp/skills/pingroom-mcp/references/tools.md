@@ -99,7 +99,7 @@ Read back the current state of a live stream you created, so a restarted produce
 
 ## list_room_icons  [RI]
 
-List the room-icon catalog (icon ids, tags, and categories) for interpreting icon values returned by room and quick-action reads.
+List the room-icon catalog (icon ids, tags, and categories). Call this before create_room / create_public_room / create_webhook to pick a valid icon id, and to interpret icon values returned by reads.
 
   (no arguments)
 
@@ -281,7 +281,7 @@ Fetch a single room by its invite code, including members and quick actions.
 Create a new room owned by the authenticated account. Free accounts may own up to five rooms.
 
   - `name` (string) **(required)** — ≤24 chars. Room display name.
-  - `icon` (string) **(required)**. Emoji or icon id.
+  - `icon` (string) **(required)**. A v3 room-icon catalog id, e.g. "bell". Call list_room_icons to discover the valid ids. Emoji is rejected with a 422.
   - `color` (string) **(required)**. Hex color, e.g. "#e33122".
 
 ## create_public_room  [–]
@@ -289,7 +289,7 @@ Create a new room owned by the authenticated account. Free accounts may own up t
 Create a publicly discoverable room with a unique @handle. Counts toward the free-plan five-room cap.
 
   - `name` (string) **(required)** — ≤24 chars. Room display name.
-  - `icon` (string) **(required)**. Emoji or icon id.
+  - `icon` (string) **(required)**. A v3 room-icon catalog id, e.g. "bell". Call list_room_icons to discover the valid ids. Emoji is rejected with a 422.
   - `color` (string) **(required)**. Hex color, e.g. "#e33122".
   - `handle` (string) **(required)**. Globally unique @handle (vanity URL): lowercase letters, digits, underscores.
   - `description` (string) — ≤120 chars. Short room description shown in public discovery.
@@ -361,7 +361,7 @@ Configure a numbered quick-action slot for a room the account owns.
 
 ## set_avatar  [DI]
 
-Set this agent's avatar. Must be one of the PingRoom bot avatars.
+Set this agent's own avatar — the robot face its pings and Questions wear. Must be one of the PingRoom bot avatars. Never touches the bound human's profile picture. Returns `{ok, avatar_id, avatar_url}`.
 
   - `avatar_id` (string) **(required)**. Bot avatar id, e.g. "bots-3".
 

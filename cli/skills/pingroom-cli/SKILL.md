@@ -140,7 +140,13 @@ Your own sends are excluded. For one specific reply, prefer `ask`/`watch`.
 
 ## Managing rooms, webhooks, quick actions, attachments
 
+Room `--icon` takes a **v3 catalog id, never an emoji** (`bell`, `globe`,
+`terminal`, `paperplane`, …) — run `pingroom rooms icons` to browse the
+catalog; the server 422s anything off-catalog. Quick-action `--icon` is the
+opposite: it takes an emoji.
+
 ```bash
+pingroom rooms icons                                  # browse the icon catalog
 pingroom rooms list|get <code>
 pingroom rooms create -n "Deploys" --icon bell --color "#e33122"
 pingroom rooms create -n "Status" --icon globe --color "#0391fe" --public --handle status

@@ -72,6 +72,19 @@ Call `list_rooms` first (cache the result for the conversation). Rules:
 - If the user names a room ambiguously, match on name case-insensitively; when
   several match, ask which one rather than guessing.
 
+## Creating a room
+
+`create_room { name, icon, color }` (private) or `create_public_room { name,
+icon, color, handle }`. Two rules the schema alone won't teach you:
+
+- `icon` is a **v3 catalog id, never an emoji**. Call `list_room_icons` and
+  pick an id whose tags fit the room (`bell`, `globe`, `terminal`,
+  `paperplane`, …). The server 422s anything off-catalog. Emoji is fine for
+  *quick actions*; rooms take catalog ids only.
+- `color` is any `#rrggbb` hex — brand colors welcome (e.g. `#e33122`).
+
+Free accounts own at most five rooms (`402 room_limit_reached`).
+
 ## Recipes
 
 ### Plain ping
