@@ -1,45 +1,106 @@
 ---
-name: pingroom-cli
+name: pingroom
 description: >-
-  Use the `pingroom` CLI to reach humans from terminals, scripts, CI, and
-  Claude Code hooks — send pings with file attachments up to 5 MiB (zip, pdf,
-  images, markdown, html, txt), tappable links, map locations, and
-  acknowledgement requests; ask questions and block a shell on the human's
-  answer; gate deploys on approve/deny; drive lock-screen live-progress cards;
-  stream incoming pings; and manage rooms, webhooks, and quick actions. Reach
-  for this skill whenever work happens in a shell — a CI pipeline that must
-  alert someone, a script that needs sign-off, "ping me from the build",
-  attaching a large file to a PingRoom message, wiring Claude Code hooks to a
-  phone, or creating/configuring PingRoom rooms and webhooks. If the task is
-  conversational (no shell), prefer the sibling `pingroom-mcp` skill.
+  Reach a human through PingRoom from an OpenClaw agent using the `pingroom`
+  CLI — send a ping to their phone (with files up to 5 MiB, tappable links, map
+  locations, or an acknowledgement request), ask a question and block until they
+  answer, gate an action on approve/deny, hand a decision to your authorizing
+  human, drive a lock-screen live-progress card, and stream incoming pings. Use
+  it whenever the task means "notify me", "let me know when it's done", "ask me
+  before deploying", "send this to my phone", "ping the team", or any step that
+  needs a real human decision rather than a guess. Pairing works without a
+  terminal: `pingroom pair` prints an approval link.
+version: 1.0.0
+homepage: https://pingroom.io/connect-openclaw.md
+user-invocable: true
+metadata:
+  {
+    "openclaw":
+      {
+        "emoji": "📣",
+        "homepage": "https://pingroom.io/connect-openclaw.md",
+        "requires": { "bins": ["pingroom"] },
+        "primaryEnv": "PINGROOM_TOKEN",
+        "install":
+          [
+            {
+              "id": "node",
+              "kind": "node",
+              "package": "@pingroom/cli",
+              "bins": ["pingroom"],
+              "label": "Install @pingroom/cli (npm)",
+            },
+          ],
+      },
+  }
 ---
 
-# pingroom CLI: humans in the loop, from a shell
+# PingRoom: reach a human from an OpenClaw agent
 
-`pingroom` is a Node ≥ 20 CLI (`npm i -g @pingroom/cli`) that turns shell
-steps into events on a person's phone — and turns human decisions into exit
-codes a script can branch on. A paired credential lives in
-`~/.pingroom/credentials.json`; run bare `pingroom` once in an interactive
-terminal to pair, `pingroom pair` where there is no terminal, or set
-`PINGROOM_TOKEN` in CI.
+`pingroom` is a Node ≥ 20 CLI that turns a step in your work into an event on a
+person's phone — a push they feel, a card on their lock screen, a question they
+answer with one tap — and turns their answer back into an exit code you can
+branch on. Requires `@pingroom/cli` ≥ 0.10.0.
+
+## Connect first (no terminal needed)
+
+OpenClaw runs as a daemon, so there is no terminal to scan a QR with. Use the
+headless flow:
+
+```bash
+pingroom pair
+```
+
+It prints an approval link and waits. **Relay that link to the human** — send it
+in the current conversation — and tell them it expires in 15 minutes. When they
+approve on their phone they also choose which rooms this agent may reach.
+
+The command is long-running: OpenClaw backgrounds it after a few seconds, so
+follow it with the `process` tool to read the link and to see the result. Exit
+0 means paired; exit 3 means the link expired — run it again for a fresh one.
+Re-running when already paired re-pairs and revokes the previous connection.
+
+`pingroom pair --json` prints one JSON object per line instead
+(`{"event":"pair_url",…}` first, `{"event":"connected",…}` last), which is
+easier to parse out of a process log. The credential is never printed.
+
+### Or use a token
+
+If the human already has a PingRoom agent credential, skip pairing entirely and
+put it in the skill's config instead of pairing:
+
+```json5
+{
+  skills: {
+    entries: {
+      pingroom: {
+        env: { PINGROOM_TOKEN: "…", PINGROOM_ROOM: "ab12cd" },
+      },
+    },
+  },
+}
+```
+
+`apiKey` works too and maps onto `PINGROOM_TOKEN` (this skill declares it as
+its `primaryEnv`), including as a SecretRef:
+`apiKey: { source: "env", provider: "default", id: "PINGROOM_TOKEN" }`.
+
+**Sandbox caveat:** `skills.entries.*.env` is injected into the *host* agent
+run, not into a sandboxed `exec`. If your agent runs sandboxed, either put the
+credential in `agents.defaults.sandbox.docker.env` or mount a `PINGROOM_HOME`
+holding `credentials.json` into the container.
 
 ## Auth model — pick the mode before the flags
 
-- **Agent token mode** (default here): the stored credential, or
-  `--token` / `PINGROOM_TOKEN`, plus `--room <code>` (or
-  `pingroom config set default_room <code>`). Full feature set.
+- **Agent credential** (default): the paired credential in
+  `~/.pingroom/credentials.json` (or `$PINGROOM_HOME/credentials.json`), or
+  `PINGROOM_TOKEN`, plus `--room <code>` / `PINGROOM_ROOM` /
+  `pingroom config set default_room <code>`. Full feature set.
 - **Webhook mode**: `pingroom ping -w <webhook-url>` — the URL carries its own
-  secret, no account needed. Best for CI that should only ever ping one room.
-  Only `ping` supports it.
-- Not connected? Bare `pingroom` in an interactive terminal starts QR pairing.
-  There is deliberately no `login` subcommand. On a machine with no terminal
-  (daemon, container, agent runtime) run `pingroom pair` — it prints the
-  approval link, waits once, and exits 3 if the link expired. In CI, set
-  `PINGROOM_TOKEN`; the CLI never prompts or draws a QR without a TTY.
+  secret, no account needed. Only `ping` supports it.
 
 **Exit codes carry the human's answer**: 0 success/answered/acked/approved ·
-1 error · 2 bad usage · 3 expired · 4 cancelled/denied/not-ready. Build shell
-gates on them:
+1 error · 2 bad usage · 3 expired · 4 cancelled/denied/not-ready.
 
 ```bash
 if pingroom approval -p "Ship v2 to production?" --wait; then deploy; fi
@@ -50,8 +111,9 @@ answered question exits 0, but an answered APPROVAL exits 0 only on `approve`
 and 4 on `deny`. That is what makes the one-liner above a real gate rather
 than a prompt everyone passes.
 
-<!-- shared-body:start — copied verbatim into skills/openclaw/skill/SKILL.md.
-     knowledge/tools/audit-knowledge.mjs fails the build if the two drift. -->
+<!-- shared-body:start — verbatim copy of the same region in
+     skills/cli/skills/pingroom-cli/SKILL.md. Edit there, then re-copy; the two
+     are compared by knowledge/tools/audit-knowledge.mjs. -->
 
 ## Sending pings
 
@@ -180,66 +242,34 @@ prints "unknown command", the installed binary is older than these docs
 
 <!-- shared-body:end -->
 
-## Claude Code hook
+## Waiting for a human under OpenClaw
 
-`pingroom hook` is a ready-made Claude Code hook: it pings on Stop /
-Notification events and can route tool-permission prompts to a PingRoom
-question you answer from your phone. Wire it in `.claude/settings.json` hooks;
-run `pingroom hook --print-config` for a
-ready-to-paste settings block.
+`--wait` blocks until the human answers or the TTL runs out — minutes, not
+seconds. OpenClaw backgrounds a command that runs past its yield window and
+hands you the `process` tool to follow it, so a long wait is normal and does
+not need a shorter TTL. Two rules:
 
-## CI patterns
-
-```yaml
-# GitHub Actions — the published action wraps this CLI.
-# Webhook mode carries no account credential and needs no room: the URL is
-# already room-scoped.
-- uses: pingroom/cli@v0
-  with:
-    webhook-url: ${{ secrets.PINGROOM_WEBHOOK_URL }}
-    message: "CI failed on ${{ github.ref_name }}"
-    urgent: 'true'
-
-# Token mode addresses a room explicitly. `room` is REQUIRED here — a token
-# with no room exits 2, and CI has no `config set default_room` to fall back on.
-- uses: pingroom/cli@v0
-  with:
-    token: ${{ secrets.PINGROOM_TOKEN }}
-    room: ${{ secrets.PINGROOM_ROOM }}
-    message: "CI failed on ${{ github.ref_name }}"
-    urgent: 'true'
-```
-
-Plain shell everywhere else — the CLI is the contract. Webhook mode when the
-pipeline should hold no account credential at all.
-
-## Installing these skills elsewhere
-
-`pingroom skills` lists both published skills and every way to install them;
-`pingroom skills install` copies them into `~/.claude/skills` (needs `git`).
-It refuses to replace a skill that is already installed — pass `--force` for
-that, or `--dir <path>` to install somewhere else. Requires CLI >= 0.8.0.
+- **Never report a timeout as an answer.** Exit 3 means the question expired
+  with nobody answering; exit 4 means they said no. Say which one happened.
+- **Only open a gate you intend to stay alive for.** If your run ends while a
+  question is open, the human's answer is still recorded and readable later
+  with `pingroom list --state answered`, but nothing wakes you to act on it.
 
 ## Troubleshooting
 
-- `an agent token is required` → not paired here: run bare `pingroom`
-  interactively, or export `PINGROOM_TOKEN`.
-- `room_not_granted` → the human scoped this agent to specific rooms; they add
-  more under Connected Agents in the app.
-- `pro_required` → attachments/webhooks need the account upgraded; say so
-  instead of retrying.
-- Exit 3 after `--wait` → the human never answered in time. Treat as "no".
-- Config lives in `~/.pingroom/` (`PINGROOM_HOME` overrides); `pingroom config
-  list` shows it.
-- `insufficient_scope` → the credential was approved before the CLI needed that
-  permission. `pingroom reconnect` re-approves with the current set: the old
-  connection keeps working until the new one is approved, and cancelling
-  changes nothing. It then revokes the old one, so any other machine or CI job
-  sharing that credential stops working — it refuses outright when
-  `PINGROOM_TOKEN` is set, rather than revoking a token it did not issue.
-- `pingroom logout` is LOCAL ONLY: it unlinks `~/.pingroom/credentials.json`
-  and leaves the connection active on the server. To replace a connection use
-  `reconnect`; to end one, revoke it under Connected Agents in the app.
-- An "@pingroom/cli X is available" line on stderr is the once-a-day update
-  notice, not an error. It never changes stdout or the exit code, and is already
-  suppressed in CI; `PINGROOM_NO_UPDATE_CHECK=1` silences it everywhere.
+- `an agent token is required` — not connected. Run `pingroom pair` and relay
+  the link, or set `PINGROOM_TOKEN` in `skills.entries.pingroom.env`.
+- Bare `pingroom` printing "not connected" is expected on a daemon: it will not
+  start a 15-minute pairing poll from a non-interactive shell. Use
+  `pingroom pair`, which asks for exactly that.
+- `403 room_not_granted` — the room is outside what the human approved. Widen
+  it under Connected Agents in the PingRoom app, or `pingroom pair` again.
+- `403 insufficient_scope` — the credential predates a command this skill uses.
+  `pingroom pair` re-approves with the current set.
+- `402 pro_required` — attachments and webhook management need a Pro account.
+- `pingroom logout` only clears the local file; the server-side credential stays
+  live. Revoke it under Connected Agents, or let `pingroom pair` do it.
+
+## Reference
+
+Full command reference: https://pingroom.io/connect-openclaw.md

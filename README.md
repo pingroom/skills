@@ -1,17 +1,23 @@
 # PingRoom agent skills
 
-Ready-to-install [Claude Code skills](https://code.claude.com/docs) for reaching
-humans through [PingRoom](https://pingroom.io) — pings, files, locations,
-questions, approvals, handoffs, and lock-screen live progress.
+Ready-to-install skills for reaching humans through
+[PingRoom](https://pingroom.io) — pings, files, locations, questions, approvals,
+handoffs, and lock-screen live progress. Two are
+[Claude Code](https://code.claude.com/docs) plugins; the third is for
+[OpenClaw](https://docs.openclaw.ai).
 
 | Skill | Use it for |
 |---|---|
 | [`pingroom-mcp`](mcp/skills/pingroom-mcp/SKILL.md) | The hosted MCP connector (`https://api.pingroom.io/api/agent/mcp`) — conversational agents: send pings with locations, links, structured data, and small attachments; ask questions; gate on approvals; hand decisions to your human; drive live-progress cards. Includes a full 38-tool reference generated from the live `tools/list`. |
 | [`pingroom-cli`](cli/skills/pingroom-cli/SKILL.md) | The [`@pingroom/cli`](https://www.npmjs.com/package/@pingroom/cli) — shells, CI, and Claude Code hooks: attachments up to 5 MiB, exit-code gates on human answers, room/webhook/quick-action management. |
+| [`pingroom`](openclaw/skill/SKILL.md) (OpenClaw) | The same CLI, packaged for [OpenClaw](https://docs.openclaw.ai) agents: headless pairing with `pingroom pair`, `skills.entries` credential wiring, and the sandbox caveat. Not a Claude Code plugin — see [Install for OpenClaw](#for-openclaw). |
 
-The two are siblings and cross-reference each other: the MCP skill defers to the
-CLI one for shell work, and the CLI skill defers to MCP for conversational work.
-Installing both is the intended setup.
+The first two are Claude Code siblings and cross-reference each other: the MCP
+skill defers to the CLI one for shell work, and the CLI skill defers to MCP for
+conversational work. Installing both is the intended setup there. The OpenClaw
+skill shares the CLI skill's command body verbatim — a marked region kept in
+lockstep by `knowledge/tools/audit-knowledge.mjs` — and swaps the Claude Code
+specifics for OpenClaw's.
 
 ## Install
 
@@ -40,6 +46,27 @@ git clone https://github.com/pingroom/skills.git /tmp/pingroom-skills
 cp -r /tmp/pingroom-skills/mcp/skills/pingroom-mcp ~/.claude/skills/
 cp -r /tmp/pingroom-skills/cli/skills/pingroom-cli ~/.claude/skills/
 ```
+
+### For OpenClaw
+
+The OpenClaw skill is not a Claude Code plugin and is not installed by
+`pingroom skills install`. From a clone:
+
+```bash
+git clone https://github.com/pingroom/skills.git
+openclaw skills install ./skills/openclaw/skill        # add --global to share it
+```
+
+(`openclaw skills install git:…` expects `SKILL.md` at the repository root, so
+the clone-then-install form is the one that works for a skill in a subdirectory.)
+
+Then connect the CLI without a terminal:
+
+```bash
+pingroom pair          # prints an approval link; approve it on your phone
+```
+
+Full guide: https://pingroom.io/connect-openclaw.md
 
 ## Connect
 
@@ -85,10 +112,17 @@ mcp/
 cli/
   .claude-plugin/plugin.json
   skills/pingroom-cli/SKILL.md
+openclaw/
+  skill/SKILL.md                 OpenClaw skill — flat, no plugin.json
 ```
+
+`openclaw/` is deliberately outside `marketplace.json`: OpenClaw has no
+`plugin.json`, and listing it as a Claude Code plugin would install a second,
+near-identical skill beside `pingroom-cli`.
 
 ## More
 
 - Agent integration guide: https://pingroom.io/agent.md
 - Auth protocol: https://pingroom.io/auth.md
 - MCP connector guide: https://pingroom.io/connect-mcp.md
+- OpenClaw guide: https://pingroom.io/connect-openclaw.md
