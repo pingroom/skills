@@ -26,6 +26,9 @@ Then, in any chat with your agent:
 
 Approve the link on your phone and pick which rooms the agent may reach. That
 is the whole setup — the credential is written into `channels.pingroom` for you.
+WebChat displays a QR for the short-lived pairing link without saving it to chat
+history. Channels that support images receive the QR as an attachment. The
+approval link remains available as a fallback.
 
 `/pingroom status`, `/pingroom rooms`, and `/pingroom disconnect` do what they
 say. The command is `connect`, never `pair`: OpenClaw's own `/pair` is DM

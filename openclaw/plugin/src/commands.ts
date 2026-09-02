@@ -1,6 +1,9 @@
 import { PingRoom } from "@pingroom/sdk";
+import type { ReplyPayload } from "openclaw/plugin-sdk/reply-payload";
 import { AGENT_LABEL, DEFAULT_BASE_URL, PLUGIN_SCOPES } from "./constants.js";
 import { inspectAccount, readChannelConfig } from "./config.js";
+
+const PAIRING_QR_MAX_BYTES = 1024 * 1024;
 
 /**
  * `/pingroom connect|status|rooms|disconnect`.
@@ -13,6 +16,8 @@ export interface CommandContext {
   args?: string;
   senderIsOwner?: boolean;
   sessionKey?: string;
+  channel?: string;
+  channelId?: string;
   config: unknown;
 }
 
@@ -29,11 +34,15 @@ export interface CommandDeps {
   pending: Set<string>;
   createClient?: (baseUrl: string) => PingRoom;
   now?: () => number;
+  /** Override used by tests; production loads OpenClaw's QR and media APIs on demand. */
+  renderPairingQr?: (setupCode: string) => Promise<string>;
+  onPairingQrRenderError?: () => void;
 }
 
-export interface CommandReply {
+export interface CommandReply extends ReplyPayload {
   text: string;
-  presentation?: unknown;
+  /** Marks local media as trusted in direct plugin-command replies. */
+  trustedLocalMedia?: boolean;
   continueAgent?: boolean;
 }
 
@@ -112,23 +121,107 @@ async function connect(ctx: CommandContext, deps: CommandDeps, args: string[]): 
     }
   })();
 
+  const setupCode = pairingQrUrl(pairing) ?? pairing.pair_url;
+  const expiresAtMs = (deps.now?.() ?? Date.now()) + (pairing.expires_in * 1000);
+  const expiresIn = formatDuration(pairing.expires_in);
+  const linkReply = pairingReply(pairing.pair_url, expiresIn, false);
+  const qrReply = pairingReply(pairing.pair_url, expiresIn, true);
+
+  if (isWebChat(ctx)) {
+    return {
+      ...qrReply,
+      // OpenClaw renders the setup code as a live QR. sensitiveMedia prevents
+      // the code and generated image from being saved to history.
+      channelData: {
+        openclawPairingQr: { setupCode, expiresAtMs },
+      },
+      sensitiveMedia: true,
+    };
+  }
+
+  try {
+    const mediaUrl = await (deps.renderPairingQr ?? renderManagedPairingQr)(setupCode);
+    return {
+      ...qrReply,
+      mediaUrl,
+      attachments: [
+        {
+          type: "image",
+          mediaUrl,
+          mimeType: "image/png",
+          name: "pingroom-pairing.png",
+          trustedLocalMedia: true,
+        },
+      ],
+      trustedLocalMedia: true,
+      sensitiveMedia: true,
+    };
+  } catch {
+    deps.onPairingQrRenderError?.();
+    return linkReply;
+  }
+}
+
+function pairingReply(pairUrl: string, expiresIn: string, hasQr: boolean): CommandReply {
   return {
-    text: `Approve PingRoom access on your phone: ${pairing.pair_url}\nThe link expires in 15 minutes.`,
+    text: hasQr
+      ? `Scan the QR with your phone, or open this approval link: ${pairUrl}\nExpires in ${expiresIn}.`
+      : `Approve PingRoom access on your phone: ${pairUrl}\nThe link expires in ${expiresIn}.`,
     presentation: {
       title: "Connect PingRoom",
       tone: "info",
       blocks: [
-        { type: "text", text: "Open the link, sign in, and choose which rooms this agent may use." },
+        {
+          type: "text",
+          text: hasQr
+            ? "Scan the QR, or open the link to sign in and choose which rooms this agent may use."
+            : "Open the link, sign in, and choose which rooms this agent may use.",
+        },
         {
           type: "buttons",
           buttons: [
-            { label: "Approve in PingRoom", style: "primary", action: { type: "url", url: pairing.pair_url } },
+            { label: "Approve in PingRoom", style: "primary", action: { type: "url", url: pairUrl } },
           ],
         },
-        { type: "context", text: "Expires in 15 min · nothing is stored until you approve." },
+        { type: "context", text: `Expires in ${expiresIn} · credentials are saved only after approval.` },
       ],
     },
   };
+}
+
+function formatDuration(seconds: number): string {
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+}
+
+/**
+ * Render only after a non-WebChat connect command runs. Keeping both imports
+ * here prevents plugin discovery from loading the QR runtime or touching disk.
+ */
+async function renderManagedPairingQr(setupCode: string): Promise<string> {
+  const [{ renderQrPngBase64 }, { saveMediaBuffer }] = await Promise.all([
+    import("openclaw/plugin-sdk/media-runtime"),
+    import("openclaw/plugin-sdk/media-store"),
+  ]);
+  const png = Buffer.from(await renderQrPngBase64(setupCode), "base64");
+  const saved = await saveMediaBuffer(
+    png,
+    "image/png",
+    "outbound",
+    PAIRING_QR_MAX_BYTES,
+    "pingroom-pairing.png",
+  );
+  return saved.path;
+}
+
+function pairingQrUrl(pairing: unknown): string | undefined {
+  if (!pairing || typeof pairing !== "object") return undefined;
+  const value = (pairing as { pair_qr_url?: unknown }).pair_qr_url;
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function isWebChat(ctx: CommandContext): boolean {
+  return ctx.channel?.toLowerCase() === "webchat" || ctx.channelId?.toLowerCase() === "webchat";
 }
 
 function status(ctx: CommandContext): CommandReply {

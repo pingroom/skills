@@ -53,6 +53,8 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
         args?: string;
         senderIsOwner?: boolean;
         sessionKey?: string;
+        channel?: string;
+        channelId?: string;
         config: unknown;
       }) => {
         const reply = await runCommand(
@@ -60,6 +62,8 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
             ...(ctx.args !== undefined ? { args: ctx.args } : {}),
             ...(ctx.senderIsOwner !== undefined ? { senderIsOwner: ctx.senderIsOwner } : {}),
             ...(ctx.sessionKey !== undefined ? { sessionKey: ctx.sessionKey } : {}),
+            ...(ctx.channel !== undefined ? { channel: ctx.channel } : {}),
+            ...(ctx.channelId !== undefined ? { channelId: ctx.channelId } : {}),
             config: ctx.config ?? api.config,
           },
           {
@@ -97,6 +101,9 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
                 contextKey: "pingroom:connect",
               } as never);
               api.logger.info(text);
+            },
+            onPairingQrRenderError: () => {
+              api.logger.warn?.("Failed to render the PingRoom pairing QR; sending only the approval link");
             },
           },
         );
