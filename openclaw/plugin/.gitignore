@@ -2,3 +2,5 @@ node_modules/
 dist/
 skills/
 *.tgz
+# clawhub package validate writes its inspector output here
+reports/
