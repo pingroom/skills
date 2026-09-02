@@ -50,15 +50,29 @@ cp -r /tmp/pingroom-skills/cli/skills/pingroom-cli ~/.claude/skills/
 ### For OpenClaw
 
 The OpenClaw skill is not a Claude Code plugin and is not installed by
-`pingroom skills install`. From a clone:
+`pingroom skills install`. It publishes to ClawHub as
+[`@pingroom/pingroom`](https://clawhub.ai/pingroom/pingroom):
+
+```bash
+openclaw skills install @pingroom/pingroom        # add --global to share it
+```
+
+Or from a clone:
 
 ```bash
 git clone https://github.com/pingroom/skills.git
-openclaw skills install ./skills/openclaw/skill        # add --global to share it
+openclaw skills install ./skills/openclaw/skill
 ```
 
 (`openclaw skills install git:…` expects `SKILL.md` at the repository root, so
-the clone-then-install form is the one that works for a skill in a subdirectory.)
+the clone form is the one that works for a skill in a subdirectory.)
+
+The channel plugin beside it publishes to npm as
+[`@pingroom/openclaw-plugin`](https://www.npmjs.com/package/@pingroom/openclaw-plugin):
+
+```bash
+openclaw plugins install npm:@pingroom/openclaw-plugin
+```
 
 Then connect the CLI without a terminal:
 
