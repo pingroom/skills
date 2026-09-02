@@ -1,0 +1,111 @@
+{
+  "name": "@pingroom/openclaw-plugin",
+  "version": "0.1.0",
+  "description": "OpenClaw channel plugin for PingRoom: phone pings, tappable Questions, approvals, and handoffs from any OpenClaw agent.",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://pingroom.io/connect-openclaw.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pingroom/skills.git",
+    "directory": "openclaw/plugin"
+  },
+  "engines": {
+    "node": ">=22.22.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./setup-entry.js": {
+      "types": "./dist/setup-entry.d.ts",
+      "import": "./dist/setup-entry.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist skills",
+    "build": "tsc -p tsconfig.json && node scripts/sync-skill.mjs",
+    "test": "npm run build && node --test \"test/*.test.mjs\"",
+    "prepublishOnly": "npm run clean && npm run build && node --test \"test/*.test.mjs\"",
+    "inspect": "openclaw plugins inspect pingroom --runtime --json"
+  },
+  "dependencies": {
+    "@pingroom/sdk": "^0.4.5"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.8.2"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "openclaw": "2026.8.2",
+    "typescript": "^5.6.0"
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ],
+    "setupEntry": "./dist/setup-entry.js",
+    "channel": {
+      "id": "pingroom",
+      "label": "PingRoom",
+      "selectionLabel": "PingRoom (phone pings, Questions, approvals)",
+      "detailLabel": "PingRoom agent credential",
+      "docsPath": "/channels/pingroom",
+      "docsLabel": "pingroom",
+      "blurb": "Reach the human on their phone: pings, tappable Questions, approvals, and handoffs.",
+      "order": 90,
+      "markdownCapable": false,
+      "setup": {
+        "fields": [
+          {
+            "key": "token",
+            "kind": "string",
+            "sensitive": true,
+            "cli": {
+              "flags": "--token <credential>",
+              "description": "PingRoom agent credential (or run /pingroom connect in chat)"
+            }
+          },
+          {
+            "key": "defaultRoom",
+            "kind": "string",
+            "cli": {
+              "flags": "--default-room <invite-code>",
+              "description": "Room invite code used when no target is given"
+            }
+          },
+          {
+            "key": "useEnv",
+            "kind": "boolean",
+            "envVars": [
+              "PINGROOM_TOKEN"
+            ],
+            "cli": {
+              "flags": "--use-env",
+              "description": "Read the credential from PINGROOM_TOKEN"
+            }
+          }
+        ]
+      }
+    },
+    "compat": {
+      "pluginApi": ">=2026.8.2"
+    },
+    "build": {
+      "openclawVersion": "2026.8.2"
+    }
+  }
+}

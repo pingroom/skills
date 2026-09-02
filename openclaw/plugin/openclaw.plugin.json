@@ -1,0 +1,110 @@
+{
+  "id": "pingroom",
+  "name": "PingRoom",
+  "description": "Reach the human on their phone: pings, tappable Questions, approvals, and handoffs.",
+  "version": "0.1.0",
+  "icon": "https://pingroom.io/icon.png",
+  "channels": ["pingroom"],
+  "activation": {
+    "onStartup": true,
+    "onChannels": ["pingroom"],
+    "onCommands": ["pingroom"]
+  },
+  "skills": ["./skills/pingroom"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "channelConfigs": {
+    "pingroom": {
+      "label": "PingRoom",
+      "description": "PingRoom agent credential, delivery room, and inbound transport.",
+      "schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "token": {
+            "oneOf": [
+              { "type": "string", "minLength": 1 },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["source", "id"],
+                "properties": {
+                  "source": { "type": "string", "enum": ["env", "file", "exec", "store"] },
+                  "provider": { "type": "string" },
+                  "id": { "type": "string" }
+                }
+              }
+            ]
+          },
+          "useCliCredential": { "type": "boolean", "default": true },
+          "baseUrl": { "type": "string", "format": "uri", "pattern": "^https://", "default": "https://api.pingroom.io" },
+          "agentLabel": { "type": "string", "maxLength": 60, "default": "OpenClaw" },
+          "defaultRoom": { "type": "string", "pattern": "^[A-Za-z0-9]{4,12}$" },
+          "dmPolicy": { "type": "string", "enum": ["allowlist", "open", "disabled"], "default": "allowlist" },
+          "allowFrom": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "urgency": { "type": "string", "enum": ["normal", "urgent"], "default": "normal" },
+          "requireAck": { "type": "boolean", "default": false },
+          "visibleReplies": { "type": "string", "enum": ["final", "all"], "default": "final" },
+          "maxChunksPerReply": { "type": "integer", "minimum": 1, "maximum": 5, "default": 2 },
+          "overflow": { "type": "string", "enum": ["truncate", "attach"], "default": "truncate" },
+          "questionTtlSeconds": { "type": "integer", "minimum": 30, "maximum": 86400, "default": 900 },
+          "inbound": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": { "type": "boolean", "default": true },
+              "pollTimeoutSeconds": { "type": "integer", "minimum": 5, "maximum": 30, "default": 25 }
+            }
+          },
+          "webhook": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": { "type": "boolean", "default": false },
+              "path": { "type": "string", "pattern": "^/", "default": "/pingroom/events" },
+              "secret": {
+                "oneOf": [
+                  { "type": "string", "minLength": 1 },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["source", "id"],
+                    "properties": {
+                      "source": { "type": "string", "enum": ["env", "file", "exec", "store"] },
+                      "provider": { "type": "string" },
+                      "id": { "type": "string" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "execEnv": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": { "type": "boolean", "default": true },
+              "injectToken": { "type": "boolean", "default": false }
+            }
+          },
+          "scopes": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "uiHints": {
+        "token": { "label": "Agent credential", "sensitive": true, "help": "Approve one with /pingroom connect instead of pasting it." },
+        "defaultRoom": { "label": "Delivery room (invite code)" },
+        "allowFrom": { "label": "Room members allowed to talk to the agent (PingRoom user ids)" },
+        "urgency": { "label": "Deliver pings time-sensitive", "advanced": true },
+        "visibleReplies": { "label": "Which replies become pings", "advanced": true },
+        "maxChunksPerReply": { "label": "Max pings per reply", "advanced": true },
+        "webhook.secret": { "label": "Outgoing webhook signing secret", "sensitive": true },
+        "execEnv.injectToken": { "label": "Expose PINGROOM_TOKEN to exec (audit-visible)", "advanced": true }
+      }
+    }
+  }
+}
