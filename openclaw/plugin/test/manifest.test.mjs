@@ -14,6 +14,8 @@ test("the manifest declares the channel OpenClaw will look for", () => {
   // configSchema validates plugins.entries.<id>.config — a different path.
   assert.equal(manifest.configSchema.additionalProperties, false);
   assert.equal(manifest.channelConfigs.pingroom.schema.additionalProperties, false);
+  assert.equal(manifest.channelConfigs.pingroom.schema.properties.scopes, undefined);
+  assert.ok(manifest.channelConfigs.pingroom.schema.properties.links.properties.latest_pings);
 });
 
 test("activation is declared explicitly", () => {
@@ -49,6 +51,12 @@ test("the declared skill directory is present and is the real skill", () => {
 test("manifest and package versions agree", () => {
   assert.equal(manifest.version, pkg.version);
   assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
+});
+
+test("the runtime user agent carries the package version", async () => {
+  const { PLUGIN_VERSION, USER_AGENT } = await import("../dist/constants.js");
+  assert.equal(PLUGIN_VERSION, pkg.version);
+  assert.equal(USER_AGENT, `pingroom-openclaw-plugin/${pkg.version}`);
 });
 
 test("it pins the OpenClaw contract it was built against", () => {

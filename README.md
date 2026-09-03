@@ -8,7 +8,7 @@ handoffs, and lock-screen live progress. Two are
 
 | Skill | Use it for |
 |---|---|
-| [`pingroom-mcp`](mcp/skills/pingroom-mcp/SKILL.md) | The hosted MCP connector (`https://api.pingroom.io/api/agent/mcp`) — conversational agents: send pings with locations, links, structured data, and small attachments; ask questions; gate on approvals; hand decisions to your human; drive live-progress cards. Includes a full 38-tool reference generated from the live `tools/list`. |
+| [`pingroom-mcp`](mcp/skills/pingroom-mcp/SKILL.md) | The hosted MCP connector (`https://api.pingroom.io/api/agent/mcp`) — conversational agents: retain a latest-pings feed URL; send pings with locations, links, structured data, and small attachments; ask questions; gate on approvals; hand decisions to your human; drive live-progress cards. Includes a full 39-tool reference generated from the live `tools/list`. |
 | [`pingroom-cli`](cli/skills/pingroom-cli/SKILL.md) | The [`@pingroom/cli`](https://www.npmjs.com/package/@pingroom/cli) — shells, CI, and Claude Code hooks: attachments up to 5 MiB, exit-code gates on human answers, room/webhook/quick-action management. |
 | [`pingroom`](openclaw/skill/SKILL.md) (OpenClaw) | The same CLI, packaged for [OpenClaw](https://docs.openclaw.ai) agents: headless pairing with `pingroom pair`, `skills.entries` credential wiring, and the sandbox caveat. Not a Claude Code plugin — see [Install for OpenClaw](#for-openclaw). |
 
@@ -109,7 +109,9 @@ claude mcp add --transport http pingroom https://api.pingroom.io/api/agent/mcp
 ```
 
 The `pingroom-cli` skill needs a paired CLI: `npm i -g @pingroom/cli && pingroom`.
-If an already-paired CLI reports `insufficient_scope`, run `pingroom reconnect`.
+New connections receive full agent access. If a legacy credential reports
+`insufficient_scope`, run `pingroom reconnect` once to replace it with a
+full-access credential.
 
 ## Layout
 

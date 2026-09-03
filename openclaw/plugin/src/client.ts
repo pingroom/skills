@@ -1,5 +1,6 @@
 import { PingRoom } from "@pingroom/sdk";
 import type { ResolvedAccount } from "./config.js";
+import { USER_AGENT } from "./constants.js";
 
 /**
  * One PingRoom SDK client per account.
@@ -11,7 +12,7 @@ export function createClient(account: ResolvedAccount): PingRoom {
   return new PingRoom({
     token: account.token,
     baseUrl: account.baseUrl,
-    userAgent: "pingroom-openclaw-plugin/0.1.0",
+    userAgent: USER_AGENT,
   });
 }
 

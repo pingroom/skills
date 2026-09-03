@@ -1,7 +1,8 @@
 import { PingRoom } from "@pingroom/sdk";
+import type { PairingStart } from "@pingroom/sdk";
 import type { ReplyPayload } from "openclaw/plugin-sdk/reply-payload";
-import { AGENT_LABEL, DEFAULT_BASE_URL, PLUGIN_SCOPES } from "./constants.js";
-import { inspectAccount, readChannelConfig } from "./config.js";
+import { AGENT_LABEL, DEFAULT_BASE_URL, USER_AGENT } from "./constants.js";
+import { apiEndpointUrl, inspectAccount, readChannelConfig } from "./config.js";
 
 const PAIRING_QR_MAX_BYTES = 1024 * 1024;
 
@@ -18,7 +19,13 @@ export interface CommandContext {
   sessionKey?: string;
   channel?: string;
   channelId?: string;
+  conversationKind?: "direct" | "group" | "channel";
   config: unknown;
+}
+
+export interface PendingPairing {
+  pairing: PairingStart;
+  expiresAtMs: number;
 }
 
 export interface CommandDeps {
@@ -27,12 +34,21 @@ export interface CommandDeps {
     token: string;
     defaultRoom?: string;
     handle?: string;
+    links?: { latest_pings: string };
   }) => Promise<void>;
   /** Announce an out-of-band result into the session that ran the command. */
   notify: (text: string, sessionKey?: string) => Promise<void>;
-  /** Track the in-flight pairing so a second /pingroom connect cannot start one. */
-  pending: Set<string>;
+  /** Keep the in-flight pairing so repeated commands can show the same QR/link. */
+  pending: Map<string, Promise<PendingPairing>>;
+  /** Serialize credential writes with disconnect for each configured account. */
+  mutationTails: Map<string, Promise<void>>;
+  /** Runtime clients for credentials this plugin successfully persisted. */
+  ownedClients: Map<string, PingRoom>;
   createClient?: (baseUrl: string) => PingRoom;
+  /** Authenticated runtime client used by commands after connection. */
+  connectedClient?: () => PingRoom;
+  /** Test seam; production uses startServerOwnedPairing below. */
+  startPairing?: (sdk: PingRoom, baseUrl: string, agentLabel: string) => Promise<PairingStart>;
   now?: () => number;
   /** Override used by tests; production loads OpenClaw's QR and media APIs on demand. */
   renderPairingQr?: (setupCode: string) => Promise<string>;
@@ -48,6 +64,14 @@ export interface CommandReply extends ReplyPayload {
 
 export async function runCommand(ctx: CommandContext, deps: CommandDeps): Promise<CommandReply> {
   const [sub = "", ...rest] = (ctx.args ?? "").trim().split(/\s+/).filter(Boolean);
+  const ownerOnlyMessage = OWNER_ONLY_MESSAGES[sub.toLowerCase()];
+  if (ownerOnlyMessage && ctx.senderIsOwner !== true) {
+    return { text: ownerOnlyMessage };
+  }
+  const privateOnlyMessage = PRIVATE_ONLY_MESSAGES[sub.toLowerCase()];
+  if (privateOnlyMessage && !isProvenPrivateSurface(ctx)) {
+    return { text: privateOnlyMessage };
+  }
   switch (sub.toLowerCase()) {
     case "":
     case "help":
@@ -69,61 +93,166 @@ const HELP = [
   "PingRoom — reach your phone from this agent.",
   "",
   "  /pingroom connect      Approve this agent on your phone (owner only)",
-  "  /pingroom status       Show the current connection",
-  "  /pingroom rooms        List rooms this agent may reach",
-  "  /pingroom disconnect   Revoke the credential (owner only)",
+  "  /pingroom status       Show the current connection (owner only)",
+  "  /pingroom rooms        List rooms this agent may reach (owner only)",
+  "  /pingroom disconnect   Disconnect this channel (owner only)",
 ].join("\n");
 
+const OWNER_ONLY_MESSAGES: Record<string, string> = {
+  connect: "Only the account owner can connect PingRoom.",
+  status: "Only the account owner can view the PingRoom connection.",
+  rooms: "Only the account owner can list PingRoom rooms.",
+  disconnect: "Only the account owner can disconnect PingRoom.",
+};
+
+const PRIVATE_ONLY_MESSAGES: Record<string, string> = {
+  connect: "For your security, connect PingRoom in OpenClaw WebChat or a direct-message session.",
+  status: "For your security, view the PingRoom connection in OpenClaw WebChat or a direct-message session.",
+  rooms: "For your security, list PingRoom rooms in OpenClaw WebChat or a direct-message session.",
+};
+
+function isProvenPrivateSurface(ctx: CommandContext): boolean {
+  if (ctx.channel?.toLowerCase() === "webchat") return true;
+  if (ctx.conversationKind === "direct") return true;
+  if (ctx.conversationKind === "group" || ctx.conversationKind === "channel") return false;
+
+  // Backward-compatible fallback for hosts that cannot project the persisted
+  // session entry yet. A generic/main key remains unproven and fails closed.
+  const sessionKey = ctx.sessionKey?.toLowerCase() ?? "";
+  return sessionKey.includes(":direct:")
+    && !sessionKey.includes(":group:")
+    && !sessionKey.includes(":channel:");
+}
+
 async function connect(ctx: CommandContext, deps: CommandDeps, args: string[]): Promise<CommandReply> {
-  if (ctx.senderIsOwner === false) {
-    return { text: "Only the account owner can connect PingRoom." };
-  }
   const accountKey = "default";
-  if (deps.pending.has(accountKey)) {
-    return { text: "A PingRoom approval link is already open. Approve it, or wait for it to expire." };
+  const existing = deps.pending.get(accountKey);
+  if (existing) {
+    const pending = await existing;
+    if (pending.expiresAtMs > (deps.now?.() ?? Date.now())) {
+      return renderPairingReply(ctx, deps, pending);
+    }
+    if (deps.pending.get(accountKey) === existing) deps.pending.delete(accountKey);
   }
 
   const config = readChannelConfig(ctx.config);
   const baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
   const label = labelFrom(args) ?? config.agentLabel ?? AGENT_LABEL;
-  const sdk = deps.createClient?.(baseUrl) ?? new PingRoom({ baseUrl });
+  const sdk = deps.createClient?.(baseUrl) ?? new PingRoom({ baseUrl, userAgent: USER_AGENT });
+  const previous = inspectAccount(ctx.config);
+  let previousOwnedClient: PingRoom | undefined;
+  if (previous.enabled && previous.configured && previous.tokenSource === "config") {
+    try {
+      // Capture this before saving: the runtime resolver may point at the new
+      // token as soon as mutateConfigFile completes.
+      previousOwnedClient = deps.connectedClient?.();
+    } catch {
+      // Pairing can still succeed. The completion notice tells the owner if the
+      // superseded credential could not be revoked automatically.
+    }
+  }
 
-  const pairing = await sdk.auth.startPairing({
-    scopes: config.scopes ?? [...PLUGIN_SCOPES],
-    agent_label: label,
-  });
+  // Store the promise before its first network await so simultaneous commands
+  // share one ceremony and can both render the same QR/link.
+  const startPromise = (async (): Promise<PendingPairing> => {
+    const pairing = await (
+      deps.startPairing?.(sdk, baseUrl, label)
+        ?? startServerOwnedPairing(sdk, baseUrl, label)
+    );
+    return {
+      pairing,
+      expiresAtMs: (deps.now?.() ?? Date.now()) + (pairing.expires_in * 1000),
+    };
+  })();
+  deps.pending.set(accountKey, startPromise);
+  let pending: PendingPairing;
+  try {
+    pending = await startPromise;
+  } catch (error) {
+    if (deps.pending.get(accountKey) === startPromise) deps.pending.delete(accountKey);
+    throw error;
+  }
 
-  deps.pending.add(accountKey);
   // Detached on purpose: the approval takes as long as it takes, and the reply
   // below has to reach the human now so they have something to tap.
   void (async () => {
+    let approvedCredentialNeedsCleanup = false;
     try {
-      const credential = await sdk.auth.waitForPairing(pairing);
-      await deps.saveCredential({
-        token: credential.credential,
-        ...(credential.room?.invite_code ? { defaultRoom: credential.room.invite_code } : {}),
-        ...(credential.handle ? { handle: credential.handle } : {}),
+      const credential = await sdk.auth.waitForPairing(pending.pairing);
+      approvedCredentialNeedsCleanup = true;
+
+      await withConnectionMutation(deps, accountKey, async () => {
+        // An expired or cancelled ceremony may finish after its replacement
+        // has started. Check while holding the same lock disconnect uses, so a
+        // cancellation cannot slip between this check and durable storage.
+        if (deps.pending.get(accountKey) !== startPromise) {
+          try { await sdk.auth.revoke(); } catch { /* best effort */ }
+          approvedCredentialNeedsCleanup = false;
+          return;
+        }
+
+        const latestPings = latestPingsUrl(credential, baseUrl);
+        await deps.saveCredential({
+          token: credential.credential,
+          ...(credential.room?.invite_code ? { defaultRoom: credential.room.invite_code } : {}),
+          ...(credential.handle ? { handle: credential.handle } : {}),
+          ...(latestPings ? { links: { latest_pings: latestPings } } : {}),
+        });
+        deps.ownedClients.set(accountKey, sdk);
+        approvedCredentialNeedsCleanup = false;
+        let previousCredentialNotice = "";
+        if (previous.tokenSource === "config" && previous.configured) {
+          try {
+            if (!previousOwnedClient) throw new Error("old client unavailable");
+            await previousOwnedClient.auth.revoke();
+          } catch {
+            previousCredentialNotice = "\nThe previous connection could not be revoked automatically. Revoke it under Connected Agents.";
+          }
+        }
+        const where = credential.room?.name
+          ? ` → #${credential.room.name}`
+          : credential.room_access === "all" ? " → all rooms" : "";
+        await deps.notify(
+          `PingRoom connected as @${credential.handle ?? "agent"}${where}.`
+            + (latestPings ? `\nLatest pings: ${latestPings}` : "")
+            + previousCredentialNotice,
+          ctx.sessionKey,
+        );
       });
-      const where = credential.room?.name
-        ? ` → #${credential.room.name}`
-        : credential.room_access === "all" ? " → all rooms" : "";
-      await deps.notify(`PingRoom connected as @${credential.handle ?? "agent"}${where}.`, ctx.sessionKey);
     } catch (error) {
+      // If durable storage failed after approval, do not leave an active,
+      // unreachable credential behind in Connected Agents.
+      if (approvedCredentialNeedsCleanup) {
+        try { await sdk.auth.revoke(); } catch { /* best effort */ }
+      }
+      if (deps.pending.get(accountKey) !== startPromise) return;
       const reason = error instanceof Error ? error.message : String(error);
+      const code = (error as { code?: unknown })?.code;
       await deps.notify(
-        reason.includes("pairing_expired")
+        code === "pairing_expired" || /pairing link expired/i.test(reason)
           ? "The PingRoom approval link expired. Run /pingroom connect again for a fresh one."
           : `PingRoom pairing failed: ${reason}`,
         ctx.sessionKey,
       );
     } finally {
-      deps.pending.delete(accountKey);
+      if (deps.pending.get(accountKey) === startPromise) deps.pending.delete(accountKey);
     }
   })();
 
+  return renderPairingReply(ctx, deps, pending);
+}
+
+async function renderPairingReply(
+  ctx: CommandContext,
+  deps: CommandDeps,
+  pending: PendingPairing,
+): Promise<CommandReply> {
+  const { pairing, expiresAtMs } = pending;
   const setupCode = pairingQrUrl(pairing) ?? pairing.pair_url;
-  const expiresAtMs = (deps.now?.() ?? Date.now()) + (pairing.expires_in * 1000);
-  const expiresIn = formatDuration(pairing.expires_in);
+  const expiresIn = formatDuration(Math.max(
+    0,
+    Math.ceil((expiresAtMs - (deps.now?.() ?? Date.now())) / 1000),
+  ));
   const linkReply = pairingReply(pairing.pair_url, expiresIn, false);
   const qrReply = pairingReply(pairing.pair_url, expiresIn, true);
 
@@ -174,8 +303,8 @@ function pairingReply(pairUrl: string, expiresIn: string, hasQr: boolean): Comma
         {
           type: "text",
           text: hasQr
-            ? "Scan the QR, or open the link to sign in and choose which rooms this agent may use."
-            : "Open the link, sign in, and choose which rooms this agent may use.",
+            ? "Scan the QR or open the link, then sign in. Approval grants full PingRoom agent access. Room access remains limited to the rooms you choose."
+            : "Open the link and sign in. Approval grants full PingRoom agent access. Room access remains limited to the rooms you choose.",
         },
         {
           type: "buttons",
@@ -220,18 +349,94 @@ function pairingQrUrl(pairing: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function latestPingsUrl(credential: unknown, baseUrl: string): string | undefined {
+  const value = (credential as { links?: { latest_pings?: unknown } })?.links?.latest_pings;
+  try {
+    if (typeof value === "string" && value.trim() && !/\p{Cc}/u.test(value)) {
+      const candidate = new URL(value.trim());
+      if (
+        (candidate.protocol === "https:" || candidate.protocol === "http:")
+        && candidate.username === ""
+        && candidate.password === ""
+      ) return candidate.toString();
+    }
+    return apiEndpointUrl(baseUrl, "/api/agent/notifications?limit=25&page=1");
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Pair without the SDK's historical default-scope helper. The currently
+ * published SDK still injects a client-owned list; using its lower-level
+ * registration plus this single request keeps the shipped plugin aligned with
+ * the server-owned grant even before the next SDK package release.
+ */
+export async function startServerOwnedPairing(
+  sdk: PingRoom,
+  baseUrl: string,
+  agentLabel: string,
+  request: typeof fetch = globalThis.fetch,
+): Promise<PairingStart> {
+  const pending = await sdk.auth.register({ type: "anonymous", agent_label: agentLabel });
+  sdk.setToken(pending.credential);
+
+  try {
+    const response = await request(apiEndpointUrl(baseUrl, "/api/agent/auth/pair/start"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${pending.credential}`,
+        "Content-Type": "application/json",
+        "User-Agent": USER_AGENT,
+      },
+      body: "{}",
+      redirect: "error",
+      signal: AbortSignal.timeout(30_000),
+    });
+    const payload = await response.json() as Partial<PairingStart> & {
+      message?: unknown;
+      error?: { message?: unknown };
+    };
+
+    if (!response.ok) {
+      const detail = typeof payload.error?.message === "string"
+        ? payload.error.message
+        : typeof payload.message === "string" ? payload.message : `HTTP ${response.status}`;
+      throw new Error(`PingRoom pairing could not start: ${detail}`);
+    }
+    if (
+      typeof payload.pair_token !== "string"
+      || typeof payload.pair_url !== "string"
+      || typeof payload.expires_in !== "number"
+      || typeof payload.poll_interval_ms !== "number"
+    ) {
+      throw new Error("PingRoom returned an incomplete pairing response.");
+    }
+
+    return payload as PairingStart;
+  } catch (error) {
+    sdk.setToken(null);
+    throw error;
+  }
+}
+
 function isWebChat(ctx: CommandContext): boolean {
   return ctx.channel?.toLowerCase() === "webchat" || ctx.channelId?.toLowerCase() === "webchat";
 }
 
 function status(ctx: CommandContext): CommandReply {
   const snapshot = inspectAccount(ctx.config);
+  if (!snapshot.enabled) {
+    return { text: "PingRoom is disconnected for this OpenClaw channel. Run /pingroom connect to replace the connection." };
+  }
   if (!snapshot.configured) {
     return { text: "PingRoom is not connected. Run /pingroom connect." };
   }
   const lines = [
     `PingRoom: connected (credential from ${describeSource(snapshot.tokenSource)})`,
     `  Delivery room: ${snapshot.defaultRoom ?? "not pinned — set channels.pingroom.defaultRoom"}`,
+    `  Latest pings: ${snapshot.latestPingsUrl ?? "unavailable"}`,
     `  API: ${snapshot.baseUrl}`,
     `  Inbound polling: ${snapshot.inboundEnabled ? "on" : "off"}`,
     `  Webhook intake: ${snapshot.webhookEnabled ? "on" : "off"}`,
@@ -242,9 +447,10 @@ function status(ctx: CommandContext): CommandReply {
 
 async function rooms(ctx: CommandContext, deps: CommandDeps): Promise<CommandReply> {
   const snapshot = inspectAccount(ctx.config);
+  if (!snapshot.enabled) return { text: "PingRoom is disconnected. Run /pingroom connect." };
   if (!snapshot.configured) return { text: "PingRoom is not connected. Run /pingroom connect." };
 
-  const sdk = deps.createClient?.(snapshot.baseUrl);
+  const sdk = deps.connectedClient?.() ?? deps.createClient?.(snapshot.baseUrl);
   if (!sdk) return { text: "PingRoom rooms are unavailable right now." };
   const list = (await sdk.rooms.list()) as Array<{ name?: string; invite_code?: string }>;
   if (!list?.length) return { text: "This agent has no rooms yet." };
@@ -254,26 +460,77 @@ async function rooms(ctx: CommandContext, deps: CommandDeps): Promise<CommandRep
 }
 
 async function disconnect(ctx: CommandContext, deps: CommandDeps): Promise<CommandReply> {
-  if (ctx.senderIsOwner === false) {
-    return { text: "Only the account owner can disconnect PingRoom." };
-  }
-  const snapshot = inspectAccount(ctx.config);
-  if (!snapshot.configured) return { text: "PingRoom is not connected." };
+  return withConnectionMutation(deps, "default", async () => {
+    // Invalidate any open ceremony while holding the credential-write lock.
+    // A waiter that already reached persistence finishes first, then this
+    // command clears it; a waiter that has not reached persistence sees the
+    // missing generation and revokes its newly approved credential.
+    const pairingCancelled = deps.pending.delete("default");
+    const snapshot = inspectAccount(ctx.config);
+    const recentlyPairedClient = deps.ownedClients.get("default");
+    if (!snapshot.enabled && !snapshot.configured && !pairingCancelled && !recentlyPairedClient) {
+      return { text: "PingRoom is already disconnected." };
+    }
+    if (!snapshot.configured && !recentlyPairedClient) {
+      // Persist the disabled state even when this invocation received a stale
+      // config snapshot while a pairing save was completing concurrently.
+      await deps.saveCredential({ token: "" });
+      return { text: pairingCancelled ? "Pending PingRoom connection cancelled." : "PingRoom is not connected." };
+    }
 
-  const sdk = deps.createClient?.(snapshot.baseUrl);
-  let revoked = false;
+    // Only a credential written directly into this plugin's config is owned by
+    // this command. Revoking an env/SecretRef/shared-CLI token would silently
+    // break its other consumers while leaving their source files unchanged.
+    const ownsCredential = snapshot.tokenSource === "config" || recentlyPairedClient !== undefined;
+    const sdk = ownsCredential
+      ? (recentlyPairedClient ?? deps.connectedClient?.() ?? deps.createClient?.(snapshot.baseUrl))
+      : undefined;
+    let revoked = false;
+    try {
+      if (sdk) { await sdk.auth.revoke(); revoked = true; }
+    } catch {
+      // The local credential still goes away; a live server-side registration
+      // is visible (and revocable) under Connected Agents.
+    }
+    deps.ownedClients.delete("default");
+    await deps.saveCredential({ token: "" });
+    if (!ownsCredential) {
+      return {
+        text: `PingRoom disabled locally. The credential from ${describeSource(snapshot.tokenSource)} was not revoked.`,
+      };
+    }
+    if (pairingCancelled) {
+      return {
+        text: revoked
+          ? "Pending PingRoom connection cancelled and its credential revoked."
+          : "Pending PingRoom connection cancelled locally. Revoke it under Connected Agents in the app.",
+      };
+    }
+    return {
+      text: revoked
+        ? "PingRoom disconnected and the credential revoked."
+        : "PingRoom credential cleared locally. Revoke it under Connected Agents in the app.",
+    };
+  });
+}
+
+async function withConnectionMutation<T>(
+  deps: CommandDeps,
+  accountKey: string,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const previous = deps.mutationTails.get(accountKey) ?? Promise.resolve();
+  let release!: () => void;
+  const tail = new Promise<void>((resolve) => { release = resolve; });
+  deps.mutationTails.set(accountKey, tail);
+
+  await previous;
   try {
-    if (sdk) { await sdk.auth.revoke(); revoked = true; }
-  } catch {
-    // The local credential still goes away; a live server-side registration is
-    // visible (and revocable) under Connected Agents.
+    return await operation();
+  } finally {
+    release();
+    if (deps.mutationTails.get(accountKey) === tail) deps.mutationTails.delete(accountKey);
   }
-  await deps.saveCredential({ token: "" });
-  return {
-    text: revoked
-      ? "PingRoom disconnected and the credential revoked."
-      : "PingRoom credential cleared locally. Revoke it under Connected Agents in the app.",
-  };
 }
 
 function describeSource(source: string): string {

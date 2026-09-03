@@ -1,7 +1,7 @@
 # PingRoom MCP — complete tool reference
 
 Generated from the live `tools/list` of https://api.pingroom.io/api/agent/mcp
-(38 tools). Regenerate by POSTing `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
+(39 tools). Regenerate by POSTing `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
 to that endpoint. Every tool call is `tools/call`; in Claude Code the tools
 surface as `mcp__pingroom__<name>` when the server was added directly, or as
 `mcp__plugin_pingroom_mcp_pingroom__<name>` when it came from the PingRoom
@@ -9,6 +9,15 @@ plugin (load schemas with ToolSearch "select:<the name your session lists>"
 before first use).
 
 Annotations: R = read-only, D = destructive, I = idempotent.
+
+## connection_info  [RI]
+
+Return this connection's handle, room-access mode, and stable authenticated
+links. `links.latest_pings` is a newest-first GET feed across the granted rooms.
+The URL contains no credential; use the saved MCP bearer token in the
+`Authorization` header.
+
+  (no arguments)
 
 ## list_rooms  [RI]
 

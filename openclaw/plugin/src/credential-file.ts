@@ -11,7 +11,13 @@ import { dirname, join } from "node:path";
  */
 export function writeCliCredential(
   home: string,
-  credential: { token: string; handle?: string; room?: { invite_code?: string; name?: string }; apiBase: string },
+  credential: {
+    token: string;
+    handle?: string;
+    room?: { invite_code?: string; name?: string };
+    links?: { latest_pings?: string };
+    apiBase: string;
+  },
 ): string {
   const path = join(home, "credentials.json");
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
@@ -25,7 +31,7 @@ export function writeCliCredential(
       rooms: [],
       room_access: null,
       account: null,
-      scopes: [],
+      ...(credential.links ? { links: credential.links } : {}),
       api_url: credential.apiBase,
       created_at: new Date().toISOString(),
     }, null, 2)}\n`,

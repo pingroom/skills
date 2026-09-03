@@ -11,6 +11,7 @@ export interface PingRoomChannelConfig {
   baseUrl?: string;
   agentLabel?: string;
   defaultRoom?: string;
+  links?: { latest_pings?: string };
   dmPolicy?: string;
   allowFrom?: string[];
   urgency?: "normal" | "urgent";
@@ -22,7 +23,6 @@ export interface PingRoomChannelConfig {
   inbound?: { enabled?: boolean; pollTimeoutSeconds?: number };
   webhook?: { enabled?: boolean; path?: string; secret?: string | SecretRefLike };
   execEnv?: { enabled?: boolean; injectToken?: boolean };
-  scopes?: string[];
 }
 
 export interface SecretRefLike {
@@ -39,6 +39,7 @@ export interface ResolvedAccount {
   baseUrl: string;
   agentLabel: string;
   defaultRoom?: string;
+  latestPingsUrl?: string;
   dmPolicy: "allowlist" | "open" | "disabled";
   allowFrom: string[];
   urgency: "normal" | "urgent";
@@ -51,7 +52,6 @@ export interface ResolvedAccount {
   inboundEnabled: boolean;
   webhook: { enabled: boolean; path: string; secret?: string | SecretRefLike };
   execEnv: { enabled: boolean; injectToken: boolean };
-  scopes?: string[];
 }
 
 /** What `openclaw status` may print: state, never the credential. */
@@ -61,6 +61,7 @@ export interface AccountSnapshot {
   tokenSource: TokenSource;
   baseUrl: string;
   defaultRoom?: string;
+  latestPingsUrl?: string;
   inboundEnabled: boolean;
   webhookEnabled: boolean;
 }
@@ -84,7 +85,12 @@ export function cliCredentialPath(env: NodeJS.ProcessEnv = process.env): string 
   return join(env.PINGROOM_HOME || join(homedir(), ".pingroom"), "credentials.json");
 }
 
-function readCliCredential(env: NodeJS.ProcessEnv): { token?: string; api_url?: string; room?: { invite_code?: string } } | null {
+function readCliCredential(env: NodeJS.ProcessEnv): {
+  token?: string;
+  api_url?: string;
+  room?: { invite_code?: string };
+  links?: { latest_pings?: string };
+} | null {
   const path = cliCredentialPath(env);
   if (!existsSync(path)) return null;
   try {
@@ -116,19 +122,50 @@ export function describeTokenSource(
 export function inspectAccount(cfg: unknown, env: NodeJS.ProcessEnv = process.env): AccountSnapshot {
   const config = readChannelConfig(cfg);
   const tokenSource = describeTokenSource(config, env);
+  const cliCredential = tokenSource === "cli-credential" ? readCliCredential(env) : null;
+  const baseUrl = config.baseUrl ?? cliCredential?.api_url ?? DEFAULT_BASE_URL;
+  const defaultRoom = resolveDefaultRoom(config, env, cliCredential);
+  const latestPingsUrl = resolveLatestPingsUrl(config, cliCredential, baseUrl);
   return {
     enabled: config.enabled !== false,
     configured: tokenSource !== "missing",
     tokenSource,
-    baseUrl: config.baseUrl ?? DEFAULT_BASE_URL,
-    ...(resolveDefaultRoom(config, env) ? { defaultRoom: resolveDefaultRoom(config, env) } : {}),
+    baseUrl,
+    ...(defaultRoom ? { defaultRoom } : {}),
+    ...(latestPingsUrl ? { latestPingsUrl } : {}),
     inboundEnabled: config.inbound?.enabled !== false,
     webhookEnabled: config.webhook?.enabled === true,
   };
 }
 
-function resolveDefaultRoom(config: PingRoomChannelConfig, env: NodeJS.ProcessEnv): string | undefined {
-  return config.defaultRoom ?? env.PINGROOM_ROOM ?? readCliCredential(env)?.room?.invite_code;
+function resolveDefaultRoom(
+  config: PingRoomChannelConfig,
+  env: NodeJS.ProcessEnv,
+  cliCredential: ReturnType<typeof readCliCredential>,
+): string | undefined {
+  return config.defaultRoom ?? env.PINGROOM_ROOM ?? cliCredential?.room?.invite_code;
+}
+
+function resolveLatestPingsUrl(
+  config: PingRoomChannelConfig,
+  cliCredential: ReturnType<typeof readCliCredential>,
+  baseUrl: string,
+): string | undefined {
+  const configured = config.links?.latest_pings ?? cliCredential?.links?.latest_pings;
+  const safe = safeHttpUrl(configured);
+  if (safe) return safe;
+  try {
+    return apiEndpointUrl(baseUrl, "/api/agent/notifications?limit=25&page=1");
+  } catch {
+    return undefined;
+  }
+}
+
+/** Build an API URL without discarding a self-hosted path prefix. */
+export function apiEndpointUrl(baseUrl: string, path: string): string {
+  const base = new URL(baseUrl);
+  const normalizedBase = `${base.origin}${base.pathname}`.replace(/\/+$/, "");
+  return normalizedBase + (path.startsWith("/") ? path : `/${path}`);
 }
 
 export class PingRoomConfigError extends Error {}
@@ -174,12 +211,18 @@ export function resolveAccount(
   }
 
   const maxChunks = clampInt(config.maxChunksPerReply, 1, 5, 2);
+  const tokenSource = describeTokenSource(config, env);
+  const cliCredential = tokenSource === "cli-credential" ? readCliCredential(env) : null;
+  const baseUrl = config.baseUrl ?? cliCredential?.api_url ?? DEFAULT_BASE_URL;
+  const defaultRoom = resolveDefaultRoom(config, env, cliCredential);
+  const latestPingsUrl = resolveLatestPingsUrl(config, cliCredential, baseUrl);
   return {
     accountId: accountId ?? "default",
     token,
-    baseUrl: config.baseUrl ?? DEFAULT_BASE_URL,
+    baseUrl,
     agentLabel: config.agentLabel ?? AGENT_LABEL,
-    ...(resolveDefaultRoom(config, env) ? { defaultRoom: resolveDefaultRoom(config, env) } : {}),
+    ...(defaultRoom ? { defaultRoom } : {}),
+    ...(latestPingsUrl ? { latestPingsUrl } : {}),
     dmPolicy,
     allowFrom: Array.isArray(config.allowFrom) ? config.allowFrom.map(String) : [],
     urgency: config.urgency === "urgent" ? "urgent" : "normal",
@@ -199,7 +242,6 @@ export function resolveAccount(
       enabled: config.execEnv?.enabled !== false,
       injectToken: config.execEnv?.injectToken === true,
     },
-    ...(config.scopes ? { scopes: config.scopes } : {}),
   };
 }
 
@@ -218,6 +260,22 @@ function resolveToken(
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
   const n = typeof value === "number" && Number.isFinite(value) ? Math.round(value) : fallback;
   return Math.min(Math.max(n, min), max);
+}
+
+function safeHttpUrl(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+  if (/\p{Cc}/u.test(value)) return undefined;
+  try {
+    const candidate = new URL(value.trim());
+    if (
+      (candidate.protocol !== "https:" && candidate.protocol !== "http:")
+      || candidate.username !== ""
+      || candidate.password !== ""
+    ) return undefined;
+    return candidate.toString();
+  } catch {
+    return undefined;
+  }
 }
 
 /** The effective per-Ping body limit for this account. */

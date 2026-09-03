@@ -12,10 +12,10 @@ function emptyHome() {
   return { PINGROOM_HOME: mkdtempSync(join(tmpdir(), "pr-oc-empty-")) };
 }
 
-function homeWithCredential(token = "cli_tok") {
+function homeWithCredential(token = "cli_tok", extra = {}) {
   const home = mkdtempSync(join(tmpdir(), "pr-oc-"));
   writeFileSync(join(home, "credentials.json"), JSON.stringify({
-    version: 1, token, api_url: "https://api.pingroom.io", room: { invite_code: "ab12cd" },
+    version: 1, token, api_url: "https://api.pingroom.io", room: { invite_code: "ab12cd" }, ...extra,
   }));
   return home;
 }
@@ -94,4 +94,62 @@ test("inspectAccount reports state and never the credential", () => {
   assert.equal(snapshot.configured, true);
   assert.equal(snapshot.tokenSource, "config");
   assert.ok(!JSON.stringify(snapshot).includes("super_secret_value"));
+});
+
+test("the latest-pings URL survives config and shared CLI credentials", () => {
+  const configured = inspectAccount(cfg({
+    token: "t",
+    links: { latest_pings: "https://api.pingroom.io/custom-feed" },
+  }), emptyHome());
+  assert.equal(configured.latestPingsUrl, "https://api.pingroom.io/custom-feed");
+
+  const home = homeWithCredential("cli_tok", {
+    links: { latest_pings: "https://api.pingroom.io/api/agent/notifications?limit=25&page=1" },
+  });
+  const shared = inspectAccount(cfg({}), { PINGROOM_HOME: home });
+  assert.equal(
+    shared.latestPingsUrl,
+    "https://api.pingroom.io/api/agent/notifications?limit=25&page=1",
+  );
+});
+
+test("a configured token never inherits stale CLI room or link metadata", () => {
+  const home = homeWithCredential("cli_tok", {
+    api_url: "https://other.example.test",
+    links: { latest_pings: "https://other.example.test/private-feed" },
+  });
+  const snapshot = inspectAccount(cfg({ token: "configured_tok" }), { PINGROOM_HOME: home });
+
+  assert.equal(snapshot.baseUrl, "https://api.pingroom.io");
+  assert.equal(snapshot.defaultRoom, undefined);
+  assert.equal(
+    snapshot.latestPingsUrl,
+    "https://api.pingroom.io/api/agent/notifications?limit=25&page=1",
+  );
+});
+
+test("the latest-pings fallback preserves a self-hosted path prefix", () => {
+  const snapshot = inspectAccount(cfg({
+    token: "configured_tok",
+    baseUrl: "https://self-hosted.example.test/pingroom/",
+  }), emptyHome());
+
+  assert.equal(
+    snapshot.latestPingsUrl,
+    "https://self-hosted.example.test/pingroom/api/agent/notifications?limit=25&page=1",
+  );
+});
+
+test("a shared CLI credential carries its API origin and rejects credential-bearing feed links", () => {
+  const home = homeWithCredential("cli_tok", {
+    api_url: "https://self-hosted.example.test",
+    links: { latest_pings: "https://secret@self-hosted.example.test/collect" },
+  });
+  const snapshot = inspectAccount(cfg({}), { PINGROOM_HOME: home });
+
+  assert.equal(snapshot.baseUrl, "https://self-hosted.example.test");
+  assert.equal(
+    snapshot.latestPingsUrl,
+    "https://self-hosted.example.test/api/agent/notifications?limit=25&page=1",
+  );
 });

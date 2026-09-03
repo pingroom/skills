@@ -2,6 +2,8 @@
 
 export const CHANNEL_ID = "pingroom";
 export const PLUGIN_ID = "pingroom";
+export const PLUGIN_VERSION = "0.1.2";
+export const USER_AGENT = `pingroom-openclaw-plugin/${PLUGIN_VERSION}`;
 export const DEFAULT_BASE_URL = "https://api.pingroom.io";
 export const AGENT_LABEL = "OpenClaw";
 
@@ -20,24 +22,6 @@ export const QUESTION_OPTION_VALUE_MAX = 40;
 /** A PingRoom Question carries 2–4 options. */
 export const QUESTION_MIN_OPTIONS = 2;
 export const QUESTION_MAX_OPTIONS = 4;
-
-/**
- * The scopes `/pingroom connect` asks the human to approve.
- *
- * This is a hard ceiling, exactly like the CLI's list: consent is an
- * intersection server-side, so a scope missing here can never be granted later
- * without re-connecting. It is deliberately narrower than the CLI's 16 — this
- * plugin never manages webhooks or quick actions.
- */
-export const PLUGIN_SCOPES = [
-  "pingroom:rooms:read",
-  "pingroom:broadcast:send",
-  "pingroom:attachments:write",
-  "pingroom:notifications:read",
-  "pingroom:questions:ask",
-  "pingroom:handoffs:create",
-  "pingroom:live:write",
-] as const;
 
 /** Reserved outbound targets that mean "the room the human pinned at pairing". */
 export const DELIVERY_ROOM_ALIASES = new Set(["me", "default", "owner"]);

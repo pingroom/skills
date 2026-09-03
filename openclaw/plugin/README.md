@@ -24,15 +24,23 @@ Then, in any chat with your agent:
 /pingroom connect
 ```
 
-Approve the link on your phone and pick which rooms the agent may reach. That
-is the whole setup — the credential is written into `channels.pingroom` for you.
-WebChat displays a QR for the short-lived pairing link without saving it to chat
-history. Channels that support images receive the QR as an attachment. The
-approval link remains available as a fallback.
+Open the approval link or scan its QR, then sign in and choose which rooms the
+agent can reach. Each connection gets full PingRoom agent access but can reach
+only the rooms you choose. The plugin saves the credential and reusable
+latest-pings URL under `channels.pingroom`. The URL contains no credential;
+requests use the saved bearer token.
 
-`/pingroom status`, `/pingroom rooms`, and `/pingroom disconnect` do what they
-say. The command is `connect`, never `pair`: OpenClaw's own `/pair` is DM
-allowlist pairing and means something else.
+WebChat shows the short-lived pairing QR without saving it to chat history.
+Channels that support images receive the QR as an attachment. The approval
+link remains available as a fallback.
+
+All `/pingroom` connection-management actions are owner-only. `/pingroom
+status` shows the saved feed URL, and `/pingroom rooms` lists the current room
+grant. Reconnecting saves the replacement before revoking the previous
+plugin-owned credential. `/pingroom disconnect` revokes plugin-owned
+credentials; shared env, SecretRef, and CLI credentials are disabled locally
+without breaking their other consumers. The command is `connect`, never `pair`:
+OpenClaw's own `/pair` is DM allowlist pairing and means something else.
 
 ## What it does
 
@@ -59,6 +67,9 @@ Everything lives under `channels.pingroom`:
       // token: { source: "env", provider: "default", id: "PINGROOM_TOKEN" }
       token: "…",
       defaultRoom: "ab12cd",     // where "me" goes
+      links: {
+        latest_pings: "https://api.pingroom.io/api/agent/notifications?limit=25&page=1",
+      },
       urgency: "normal",          // "urgent" pierces Focus
       visibleReplies: "final",    // "all" also pings tool/block output
       maxChunksPerReply: 2,       // each chunk is a separate push AND quota unit

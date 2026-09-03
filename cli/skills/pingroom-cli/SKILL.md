@@ -37,6 +37,10 @@ terminal to pair, `pingroom pair` where there is no terminal, or set
   approval link, waits once, and exits 3 if the link expired. In CI, set
   `PINGROOM_TOKEN`; the CLI never prompts or draws a QR without a TTY.
 
+Successful pairing also prints and stores `links.latest_pings`, a stable URL
+for the newest pings across granted rooms. The URL contains no credential;
+authenticate with the bearer already saved by the CLI.
+
 **Exit codes carry the human's answer**: 0 success/answered/acked/approved ·
 1 error · 2 bad usage · 3 expired · 4 cancelled/denied/not-ready. Build shell
 gates on them:
@@ -172,9 +176,8 @@ pingroom attachment get <id> --out report.md    # binary-safe download
 pingroom attachment delete <id>
 ```
 
-Webhook creation and attachment upload are Pro; public-room creation runs
-under its own consent scope. `--json` on any command prints the raw response
-for scripting. The management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
+Webhook creation and attachment upload are Pro. `--json` on any command prints
+the raw response for scripting. The management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
 prints "unknown command", the installed binary is older than these docs
 (`npm i -g @pingroom/cli` to update, or run from a checkout).
 
@@ -231,12 +234,12 @@ that, or `--dir <path>` to install somewhere else. Requires CLI >= 0.8.0.
 - Exit 3 after `--wait` → the human never answered in time. Treat as "no".
 - Config lives in `~/.pingroom/` (`PINGROOM_HOME` overrides); `pingroom config
   list` shows it.
-- `insufficient_scope` → the credential was approved before the CLI needed that
-  permission. `pingroom reconnect` re-approves with the current set: the old
-  connection keeps working until the new one is approved, and cancelling
-  changes nothing. It then revokes the old one, so any other machine or CI job
-  sharing that credential stops working — it refuses outright when
-  `PINGROOM_TOKEN` is set, rather than revoking a token it did not issue.
+- `insufficient_scope` → the CLI is using a legacy partial credential. Run
+  `pingroom reconnect` once to replace it with a full-access credential. The old
+  connection keeps working until you approve the new one; cancelling changes
+  nothing. Approval revokes the old credential, so any other machine or CI job
+  sharing that credential stops working. The command refuses to reconnect when
+  `PINGROOM_TOKEN` is set rather than revoke a token it did not issue.
 - `pingroom logout` is LOCAL ONLY: it unlinks `~/.pingroom/credentials.json`
   and leaves the connection active on the server. To replace a connection use
   `reconnect`; to end one, revoke it under Connected Agents in the app.

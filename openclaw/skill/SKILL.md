@@ -62,7 +62,10 @@ Re-running when already paired re-pairs and revokes the previous connection.
 
 `pingroom pair --json` prints one JSON object per line instead
 (`{"event":"pair_url",…}` first, `{"event":"connected",…}` last), which is
-easier to parse out of a process log. The credential is never printed.
+easier to parse out of a process log. The connected record includes
+`links.latest_pings`, a stable URL for reading the newest pings later. The URL
+contains no credential; the bearer remains in the saved credential file and is
+never printed.
 
 ### Or use a token
 
@@ -234,9 +237,8 @@ pingroom attachment get <id> --out report.md    # binary-safe download
 pingroom attachment delete <id>
 ```
 
-Webhook creation and attachment upload are Pro; public-room creation runs
-under its own consent scope. `--json` on any command prints the raw response
-for scripting. The management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
+Webhook creation and attachment upload are Pro. `--json` on any command prints
+the raw response for scripting. The management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
 prints "unknown command", the installed binary is older than these docs
 (`npm i -g @pingroom/cli` to update, or run from a checkout).
 
@@ -264,8 +266,8 @@ not need a shorter TTL. Two rules:
   `pingroom pair`, which asks for exactly that.
 - `403 room_not_granted` — the room is outside what the human approved. Widen
   it under Connected Agents in the PingRoom app, or `pingroom pair` again.
-- `403 insufficient_scope` — the credential predates a command this skill uses.
-  `pingroom pair` re-approves with the current set.
+- `403 insufficient_scope` — the credential has a legacy partial grant. Run
+  `pingroom pair` once to replace it with a full-access credential.
 - `402 pro_required` — attachments and webhook management need a Pro account.
 - `pingroom logout` only clears the local file; the server-side credential stays
   live. Revoke it under Connected Agents, or let `pingroom pair` do it.

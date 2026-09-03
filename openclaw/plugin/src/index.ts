@@ -3,8 +3,9 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk/channel-core";
 import { pingroomChannelPlugin } from "./channel.js";
 import { CHANNEL_ID, PLUGIN_ID } from "./constants.js";
 import { runCommand } from "./commands.js";
+import type { PendingPairing } from "./commands.js";
 import { inspectAccount } from "./config.js";
-import { setPingRoomRuntime } from "./runtime.js";
+import { currentAccount, setPingRoomRuntime } from "./runtime.js";
 
 /**
  * Plugin entry.
@@ -30,7 +31,9 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
   },
 
   registerFull(api: OpenClawPluginApi) {
-    const pending = new Set<string>();
+    const pending = new Map<string, Promise<PendingPairing>>();
+    const mutationTails = new Map<string, Promise<void>>();
+    const ownedClients = new Map<string, import("@pingroom/sdk").PingRoom>();
 
     setPingRoomRuntime({
       getConfig: () => api.config,
@@ -42,6 +45,11 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
       description: "Connect PingRoom, check the connection, list rooms, or disconnect.",
       acceptsArgs: true,
       requireAuth: true,
+      // External plugins receive senderIsOwner only when they declare a
+      // gateway scope. Pairing is an owner-level credential mutation, so both
+      // the host and this handler fail closed when ownership is unknown.
+      requiredScopes: ["operator.pairing"],
+      exposeSenderIsOwner: true,
       agentPromptGuidance: [
         {
           text:
@@ -53,10 +61,28 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
         args?: string;
         senderIsOwner?: boolean;
         sessionKey?: string;
+        agentId?: string;
+        sessionTarget?: { storePath?: string };
         channel?: string;
         channelId?: string;
         config: unknown;
       }) => {
+        let conversationKind: "direct" | "group" | "channel" | undefined;
+        if (ctx.sessionKey) {
+          try {
+            const entry = api.runtime?.agent?.session?.getSessionEntry?.({
+              sessionKey: ctx.sessionKey,
+              ...(ctx.agentId ? { agentId: ctx.agentId } : {}),
+              ...(ctx.sessionTarget?.storePath ? { storePath: ctx.sessionTarget.storePath } : {}),
+              readConsistency: "latest",
+            });
+            if (entry?.chatType === "direct" || entry?.chatType === "group" || entry?.chatType === "channel") {
+              conversationKind = entry.chatType;
+            }
+          } catch {
+            // The command still has the conservative session-key fallback.
+          }
+        }
         const reply = await runCommand(
           {
             ...(ctx.args !== undefined ? { args: ctx.args } : {}),
@@ -64,10 +90,14 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
             ...(ctx.sessionKey !== undefined ? { sessionKey: ctx.sessionKey } : {}),
             ...(ctx.channel !== undefined ? { channel: ctx.channel } : {}),
             ...(ctx.channelId !== undefined ? { channelId: ctx.channelId } : {}),
+            ...(conversationKind ? { conversationKind } : {}),
             config: ctx.config ?? api.config,
           },
           {
             pending,
+            mutationTails,
+            ownedClients,
+            connectedClient: () => currentAccount().sdk,
             saveCredential: async (credential) => {
               // Persisting into channels.pingroom is the host's job; without a
               // config-mutation seam we can only report it, never write it.
@@ -84,9 +114,13 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
                     section.enabled = true;
                     section.token = credential.token;
                     if (credential.defaultRoom) section.defaultRoom = credential.defaultRoom;
+                    else delete section.defaultRoom;
+                    if (credential.links) section.links = credential.links;
+                    else delete section.links;
                   } else {
                     delete section.token;
                     delete section.defaultRoom;
+                    delete section.links;
                     section.enabled = false;
                   }
                   return draft;

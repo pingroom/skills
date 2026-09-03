@@ -27,9 +27,16 @@ Tool names depend on how the server was added. A server added directly is
 `mcp__plugin_pingroom_mcp_pingroom__<name>`. Match whichever your session
 lists — this file names tools bare (`ask_question`, not the prefixed form).
 
-Read `references/tools.md` for the full 38-tool schema reference when you need
+Read `references/tools.md` for the full 39-tool schema reference when you need
 exact parameters. This file teaches you which tool to reach for and the rules
 that make the difference between "sent" and "landed".
+
+## Keep the connection receipt
+
+Call `connection_info` once after OAuth completes and retain
+`links.latest_pings`. It is a stable GET URL for the newest pings visible across
+the granted rooms. The URL contains no credential; send the connection's saved
+bearer token in the `Authorization` header when fetching it later.
 
 ## The one rule that matters
 
@@ -144,10 +151,9 @@ Two paths; pick by size:
 Both require the account to be Pro (`pro_required` otherwise). Retrieve any
 attachment later with `get_attachment { attachment_id }` (base64 back, small
 files) or `pingroom attachment get <id> --out <path>` (any size, binary-safe).
-Delete an unclaimed upload with `delete_attachment`. If `upload_attachment`
-fails with a scope error, the connector's grant predates attachments — fall
-back to the CLI, and mention that reconnecting the MCP connector with the
-`pingroom:attachments:write` scope would enable the direct path.
+Delete an unclaimed upload with `delete_attachment`. If a legacy connector
+reports `insufficient_scope`, reconnect it once to replace its partial grant
+with full PingRoom access.
 
 ### Questions
 `ask_question { invite_code, prompt (≤500), options?, text_input?, context?, ttl? }`:
@@ -219,6 +225,7 @@ also the only send that works in personal rooms. `is_urgent`/`requires_ack`
 elevate a single press without changing the saved configuration.
 
 ### Reading the room
+- `connection_info` — recover the stable latest-pings URL for this connection.
 - `list_notifications { type?, date?, limit?, page? }` /
   `get_notification { notification_id }` — history, including `data`,
   `correlation_id`, attachments, and ack state. It spans every approved room;
@@ -238,13 +245,13 @@ on the code, don't retry blindly:
 |---|---|
 | `pro_required` | Attachments/webhooks need Pro. Say so; don't loop. |
 | `room_not_granted` | Room is outside this agent's grant. Ask the human to add it under Connected Agents, or pick a granted room. |
-| `insufficient_scope` / `invalid_credential` | The token predates the permission or has the wrong audience. Reconnect the connector (or use the CLI, which holds its own credential). |
+| `insufficient_scope` / `invalid_credential` | The token uses a legacy partial grant or the wrong audience. Reconnect once for full access, or use the CLI with its separate credential. |
 | `attachment_too_large` | Over the MCP result cap — use `pingroom attachment get <id> --out …`. |
 | `validation_failed` | Read the message; commonly a public room with no other member, an unsupported room type, or a length cap. |
 | `quota_exceeded` / HTTP 429 | Back off; respect Retry-After. Never hot-loop a wait tool — they long-poll server-side already. |
 
-A tool being listed does not mean this token may call it: `tools/list` is a
-static catalog and each call re-checks its OAuth scope.
+New MCP connections receive full PingRoom agent access. Room grants and
+account-tier limits still apply to every call.
 
 ## CLI companion
 
