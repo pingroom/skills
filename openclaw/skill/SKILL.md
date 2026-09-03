@@ -9,7 +9,8 @@ description: >-
   it whenever the task means "notify me", "let me know when it's done", "ask me
   before deploying", "send this to my phone", "ping the team", or any step that
   needs a real human decision rather than a guess. Pairing works without a
-  terminal: `pingroom pair` prints an approval link.
+  terminal: `pingroom pair --agent-label "OpenClaw"` creates a separate robot
+  profile and prints its claim link.
 version: 1.0.0
 homepage: https://pingroom.io/connect-openclaw.md
 user-invocable: true
@@ -48,24 +49,29 @@ OpenClaw runs as a daemon, so there is no terminal to scan a QR with. Use the
 headless flow:
 
 ```bash
-pingroom pair
+pingroom pair --agent-label "OpenClaw"
 ```
 
-It prints an approval link and waits. **Relay that link to the human** — send it
-in the current conversation — and tell them it expires in 15 minutes. When they
-approve on their phone they also choose which rooms this agent may reach.
+It creates an OpenClaw robot profile, prints its claim link, and waits. **Relay
+that link to the human** — send it in the current conversation — and include the
+robot name and `@handle` when printed so they know exactly what they are
+claiming. The link expires in 15 minutes. On their phone they sign in, claim the
+robot, and choose which rooms it may reach. The robot acts for them; it does not
+become their personal PingRoom profile.
 
 The command is long-running: OpenClaw backgrounds it after a few seconds, so
 follow it with the `process` tool to read the link and to see the result. Exit
 0 means paired; exit 3 means the link expired — run it again for a fresh one.
-Re-running when already paired re-pairs and revokes the previous connection.
+Re-running the labeled command when already paired creates a replacement
+connection and revokes the previous one only after the replacement is saved.
 
-`pingroom pair --json` prints one JSON object per line instead
-(`{"event":"pair_url",…}` first, `{"event":"connected",…}` last), which is
-easier to parse out of a process log. The connected record includes
-`links.latest_pings`, a stable URL for reading the newest pings later. The URL
-contains no credential; the bearer remains in the saved credential file and is
-never printed.
+`pingroom pair --agent-label "OpenClaw" --json` prints one JSON object per line
+instead (`{"event":"pair_url",…}` first, `{"event":"connected",…}` last),
+which is easier to parse out of a process log. New servers include the harmless
+`agent.profile` identity in the pairing record; older servers omit it. The
+connected record includes `links.latest_pings`, a stable URL for reading the
+newest pings later. Neither record prints the credential; the bearer remains in
+the saved credential file.
 
 ### Or use a token
 
@@ -95,7 +101,7 @@ holding `credentials.json` into the container.
 
 ## Auth model — pick the mode before the flags
 
-- **Agent credential** (default): the paired credential in
+- **Agent credential** (default): the claimed robot's credential in
   `~/.pingroom/credentials.json` (or `$PINGROOM_HOME/credentials.json`), or
   `PINGROOM_TOKEN`, plus `--room <code>` / `PINGROOM_ROOM` /
   `pingroom config set default_room <code>`. Full feature set.
@@ -259,18 +265,19 @@ not need a shorter TTL. Two rules:
 
 ## Troubleshooting
 
-- `an agent token is required` — not connected. Run `pingroom pair` and relay
-  the link, or set `PINGROOM_TOKEN` in `skills.entries.pingroom.env`.
+- `an agent token is required` — not connected. Run the labeled pairing command
+  above and relay the robot identity with the link, or set `PINGROOM_TOKEN` in
+  `skills.entries.pingroom.env`.
 - Bare `pingroom` printing "not connected" is expected on a daemon: it will not
   start a 15-minute pairing poll from a non-interactive shell. Use
-  `pingroom pair`, which asks for exactly that.
+  `pingroom pair --agent-label "OpenClaw"`, which asks for exactly that.
 - `403 room_not_granted` — the room is outside what the human approved. Widen
-  it under Connected Agents in the PingRoom app, or `pingroom pair` again.
+  it under Agents in the PingRoom app, or run the labeled pairing command again.
 - `403 insufficient_scope` — the credential has a legacy partial grant. Run
-  `pingroom pair` once to replace it with a full-access credential.
+  the labeled pairing command once to replace it with a full-access credential.
 - `402 pro_required` — attachments and webhook management need a Pro account.
 - `pingroom logout` only clears the local file; the server-side credential stays
-  live. Revoke it under Connected Agents, or let `pingroom pair` do it.
+  live. Revoke it under Agents, or let the labeled pairing command do it.
 
 ## Reference
 

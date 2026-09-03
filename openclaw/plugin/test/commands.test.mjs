@@ -116,8 +116,40 @@ test("connect gives WebChat an ephemeral native pairing QR without client-select
   assert.equal(reply.mediaUrl, undefined);
   assert.deepEqual(rendered, [], "WebChat owns live QR rendering");
   assert.deepEqual(pairingRequests, [{ agent_label: "OpenClaw" }]);
-  assert.match(reply.text, /^Scan the QR/);
+  assert.match(reply.text, /^Created a PingRoom robot profile for OpenClaw\./);
+  assert.match(reply.text, /Claim this robot to let it act for you\./);
   assert.match(reply.text, new RegExp(PAIR_URL.replaceAll("?", "\\?")));
+  assert.equal(reply.presentation.title, "Claim OpenClaw");
+  assert.equal(reply.presentation.blocks[1].buttons[0].label, "Claim robot in PingRoom");
+});
+
+test("connect names the precreated robot profile before the owner signs in", async () => {
+  const { deps } = commandHarness({
+    pairing: {
+      flow_version: 2,
+      claim_mode: "agent_identity",
+      agent: {
+        id: "agent-1",
+        label: "OpenClaw",
+        handle: "agt_openclaw",
+        profile: {
+          display_name: "OpenClaw",
+          handle: "agt_openclaw",
+          avatar_id: "bots-3",
+          avatar_url: "https://api.pingroom.io/avatars/bots-3.png",
+        },
+      },
+    },
+  });
+
+  const reply = await runCommand(
+    ownerContext({ args: "connect", channel: "webchat", config: {} }),
+    deps,
+  );
+
+  assert.match(reply.text, /^Created OpenClaw @agt_openclaw\./);
+  assert.match(reply.text, /Claim this robot/);
+  assert.match(reply.presentation.blocks[0].text, /separate robot profile/);
 });
 
 test("simultaneous connect commands reuse the same in-flight QR instead of replacing it", async () => {
@@ -195,12 +227,23 @@ test("the shipped pairing path sends no scope field and preserves a self-hosted 
       pair_qr_url: PAIR_QR_URL,
       expires_in: 900,
       poll_interval_ms: 1500,
+      flow_version: 2,
+      claim_mode: "agent_identity",
+      agent: {
+        id: "agent-1",
+        label: "OpenClaw",
+        handle: "agt_openclaw",
+        profile: { display_name: "OpenClaw", handle: "agt_openclaw" },
+      },
     }), { status: 201, headers: { "Content-Type": "application/json" } });
   };
 
   const pairing = await startServerOwnedPairing(sdk, "https://api.pingroom.io/pingroom", "OpenClaw", request);
 
   assert.equal(pairing.pair_url, PAIR_URL);
+  assert.equal(pairing.flow_version, 2);
+  assert.equal(pairing.claim_mode, "agent_identity");
+  assert.equal(pairing.agent.profile.handle, "agt_openclaw");
   assert.deepEqual(calls[0], {
     path: "/api/agent/auth",
     body: { type: "anonymous", agent_label: "OpenClaw" },
@@ -233,8 +276,14 @@ test("connect saves and announces the reusable latest-pings URL", async () => {
           waitForPairing: async () => ({
             credential: "agent_token",
             handle: "openclaw",
-            room: { invite_code: "room123", name: "Ops" },
+            room: { invite_code: "legacy-room", name: "Legacy" },
+            home_room: { invite_code: "room123", name: "Ops" },
             room_access: "all",
+            owner: { name: "Mahdi" },
+            agent: {
+              label: "OpenClaw",
+              profile: { display_name: "OpenClaw", handle: "openclaw" },
+            },
             links: { latest_pings: latestPings },
           }),
         },
@@ -256,7 +305,8 @@ test("connect saves and announces the reusable latest-pings URL", async () => {
     handle: "openclaw",
     links: { latest_pings: latestPings },
   }]);
-  assert.match(notices[0], /PingRoom connected as @openclaw → #Ops\./);
+  assert.match(notices[0], /OpenClaw @openclaw was claimed by Mahdi and joined #Ops\./);
+  assert.match(notices[0], /act for you in all current and future rooms/);
   assert.match(notices[0], new RegExp(`Latest pings: ${latestPings.replaceAll("?", "\\?")}`));
 });
 
@@ -476,7 +526,8 @@ test("connect keeps its approval link when QR rendering fails", async () => {
   assert.equal(reply.trustedLocalMedia, undefined);
   assert.equal(reply.sensitiveMedia, undefined);
   assert.deepEqual(errors, ["failed"]);
-  assert.match(reply.text, /^Approve PingRoom access/);
+  assert.match(reply.text, /^Created a PingRoom robot profile for OpenClaw\./);
+  assert.match(reply.text, /Open this approval link/);
   assert.match(reply.text, new RegExp(PAIR_URL.replaceAll("?", "\\?")));
   assert.equal(reply.presentation.blocks[1].buttons[0].action.url, PAIR_URL);
 });

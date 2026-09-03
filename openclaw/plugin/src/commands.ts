@@ -24,8 +24,35 @@ export interface CommandContext {
 }
 
 export interface PendingPairing {
-  pairing: PairingStart;
+  pairing: RobotPairingStart;
   expiresAtMs: number;
+  /** The caller-owned fallback for servers that predate robot profiles. */
+  agentLabel?: string;
+}
+
+interface RobotProfile {
+  display_name?: string | null;
+  handle?: string | null;
+  avatar_id?: string | null;
+  avatar_url?: string | null;
+}
+
+interface RobotAgent {
+  id?: string;
+  label?: string | null;
+  handle?: string | null;
+  profile?: RobotProfile | null;
+}
+
+type RobotPairingStart = PairingStart & {
+  flow_version?: number;
+  claim_mode?: string;
+  agent?: RobotAgent;
+};
+
+interface RoomSummary {
+  invite_code?: string;
+  name?: string;
 }
 
 export interface CommandDeps {
@@ -92,7 +119,7 @@ export async function runCommand(ctx: CommandContext, deps: CommandDeps): Promis
 const HELP = [
   "PingRoom — reach your phone from this agent.",
   "",
-  "  /pingroom connect      Approve this agent on your phone (owner only)",
+  "  /pingroom connect      Create and claim this robot on your phone (owner only)",
   "  /pingroom status       Show the current connection (owner only)",
   "  /pingroom rooms        List rooms this agent may reach (owner only)",
   "  /pingroom disconnect   Disconnect this channel (owner only)",
@@ -160,8 +187,9 @@ async function connect(ctx: CommandContext, deps: CommandDeps, args: string[]): 
         ?? startServerOwnedPairing(sdk, baseUrl, label)
     );
     return {
-      pairing,
+      pairing: pairing as RobotPairingStart,
       expiresAtMs: (deps.now?.() ?? Date.now()) + (pairing.expires_in * 1000),
+      agentLabel: label,
     };
   })();
   deps.pending.set(accountKey, startPromise);
@@ -192,10 +220,17 @@ async function connect(ctx: CommandContext, deps: CommandDeps, args: string[]): 
         }
 
         const latestPings = latestPingsUrl(credential, baseUrl);
+        const pairingIdentity = agentIdentity(
+          pending.pairing,
+          pending.agentLabel ?? AGENT_LABEL,
+        );
+        const identity = agentIdentity(credential, pairingIdentity.displayName);
+        if (!identity.handle) identity.handle = pairingIdentity.handle;
+        const homeRoom = connectionHomeRoom(credential);
         await deps.saveCredential({
           token: credential.credential,
-          ...(credential.room?.invite_code ? { defaultRoom: credential.room.invite_code } : {}),
-          ...(credential.handle ? { handle: credential.handle } : {}),
+          ...(homeRoom?.invite_code ? { defaultRoom: homeRoom.invite_code } : {}),
+          ...(identity.handle ? { handle: identity.handle } : {}),
           ...(latestPings ? { links: { latest_pings: latestPings } } : {}),
         });
         deps.ownedClients.set(accountKey, sdk);
@@ -209,11 +244,19 @@ async function connect(ctx: CommandContext, deps: CommandDeps, args: string[]): 
             previousCredentialNotice = "\nThe previous connection could not be revoked automatically. Revoke it under Connected Agents.";
           }
         }
-        const where = credential.room?.name
-          ? ` → #${credential.room.name}`
-          : credential.room_access === "all" ? " → all rooms" : "";
+        const ownerName = connectionOwnerName(credential);
+        const robot = identity.handle
+          ? `${identity.displayName} @${identity.handle}`
+          : identity.displayName;
+        const claimed = ownerName
+          ? `${robot} was claimed by ${ownerName}`
+          : `${robot} is now claimed`;
+        const joined = homeRoom?.name ? ` and joined #${homeRoom.name}` : "";
+        const reach = credential.room_access === "all"
+          ? "\nIt can now act for you in all current and future rooms."
+          : "\nIt can now act for you only in the rooms you approved.";
         await deps.notify(
-          `PingRoom connected as @${credential.handle ?? "agent"}${where}.`
+          `${claimed}${joined}.${reach}`
             + (latestPings ? `\nLatest pings: ${latestPings}` : "")
             + previousCredentialNotice,
           ctx.sessionKey,
@@ -247,14 +290,14 @@ async function renderPairingReply(
   deps: CommandDeps,
   pending: PendingPairing,
 ): Promise<CommandReply> {
-  const { pairing, expiresAtMs } = pending;
+  const { pairing, expiresAtMs, agentLabel = AGENT_LABEL } = pending;
   const setupCode = pairingQrUrl(pairing) ?? pairing.pair_url;
   const expiresIn = formatDuration(Math.max(
     0,
     Math.ceil((expiresAtMs - (deps.now?.() ?? Date.now())) / 1000),
   ));
-  const linkReply = pairingReply(pairing.pair_url, expiresIn, false);
-  const qrReply = pairingReply(pairing.pair_url, expiresIn, true);
+  const linkReply = pairingReply(pairing, agentLabel, expiresIn, false);
+  const qrReply = pairingReply(pairing, agentLabel, expiresIn, true);
 
   if (isWebChat(ctx)) {
     return {
@@ -291,25 +334,35 @@ async function renderPairingReply(
   }
 }
 
-function pairingReply(pairUrl: string, expiresIn: string, hasQr: boolean): CommandReply {
+function pairingReply(
+  pairing: RobotPairingStart,
+  fallbackLabel: string,
+  expiresIn: string,
+  hasQr: boolean,
+): CommandReply {
+  const pairUrl = pairing.pair_url;
+  const identity = agentIdentity(pairing, fallbackLabel);
+  const robot = identity.handle
+    ? `${identity.displayName} @${identity.handle}`
+    : `a PingRoom robot profile for ${identity.displayName}`;
   return {
     text: hasQr
-      ? `Scan the QR with your phone, or open this approval link: ${pairUrl}\nExpires in ${expiresIn}.`
-      : `Approve PingRoom access on your phone: ${pairUrl}\nThe link expires in ${expiresIn}.`,
+      ? `Created ${robot}. Claim this robot to let it act for you.\nScan the QR with your phone, or open this approval link: ${pairUrl}\nExpires in ${expiresIn}.`
+      : `Created ${robot}. Claim this robot to let it act for you.\nOpen this approval link on your phone: ${pairUrl}\nThe link expires in ${expiresIn}.`,
     presentation: {
-      title: "Connect PingRoom",
+      title: `Claim ${identity.displayName}`,
       tone: "info",
       blocks: [
         {
           type: "text",
           text: hasQr
-            ? "Scan the QR or open the link, then sign in. Approval grants full PingRoom agent access. Room access remains limited to the rooms you choose."
-            : "Open the link and sign in. Approval grants full PingRoom agent access. Room access remains limited to the rooms you choose.",
+            ? "This is a separate robot profile, not your personal PingRoom profile. Scan the QR or open the link, sign in, and choose which rooms it may reach."
+            : "This is a separate robot profile, not your personal PingRoom profile. Open the link, sign in, and choose which rooms it may reach.",
         },
         {
           type: "buttons",
           buttons: [
-            { label: "Approve in PingRoom", style: "primary", action: { type: "url", url: pairUrl } },
+            { label: "Claim robot in PingRoom", style: "primary", action: { type: "url", url: pairUrl } },
           ],
         },
         { type: "context", text: `Expires in ${expiresIn} · credentials are saved only after approval.` },
@@ -349,6 +402,41 @@ function pairingQrUrl(pairing: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function cleanText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+/** Resolve the additive robot identity while retaining every legacy fallback. */
+function agentIdentity(
+  payload: unknown,
+  fallbackLabel: string,
+): { displayName: string; handle?: string } {
+  const value = payload && typeof payload === "object"
+    ? payload as { agent?: RobotAgent; handle?: unknown }
+    : {};
+  const displayName = cleanText(value.agent?.profile?.display_name)
+    ?? cleanText(value.agent?.label)
+    ?? fallbackLabel;
+  const handle = cleanText(value.agent?.profile?.handle)
+    ?? cleanText(value.agent?.handle)
+    ?? cleanText(value.handle);
+  return { displayName, ...(handle ? { handle } : {}) };
+}
+
+function connectionHomeRoom(payload: unknown): RoomSummary | undefined {
+  if (!payload || typeof payload !== "object") return undefined;
+  const value = payload as {
+    home_room?: RoomSummary | null;
+    room?: RoomSummary | null;
+  };
+  return value.home_room ?? value.room ?? undefined;
+}
+
+function connectionOwnerName(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== "object") return undefined;
+  return cleanText((payload as { owner?: { name?: unknown } }).owner?.name);
+}
+
 function latestPingsUrl(credential: unknown, baseUrl: string): string | undefined {
   const value = (credential as { links?: { latest_pings?: unknown } })?.links?.latest_pings;
   try {
@@ -377,7 +465,7 @@ export async function startServerOwnedPairing(
   baseUrl: string,
   agentLabel: string,
   request: typeof fetch = globalThis.fetch,
-): Promise<PairingStart> {
+): Promise<RobotPairingStart> {
   const pending = await sdk.auth.register({ type: "anonymous", agent_label: agentLabel });
   sdk.setToken(pending.credential);
 
@@ -394,7 +482,7 @@ export async function startServerOwnedPairing(
       redirect: "error",
       signal: AbortSignal.timeout(30_000),
     });
-    const payload = await response.json() as Partial<PairingStart> & {
+    const payload = await response.json() as Partial<RobotPairingStart> & {
       message?: unknown;
       error?: { message?: unknown };
     };
@@ -414,7 +502,7 @@ export async function startServerOwnedPairing(
       throw new Error("PingRoom returned an incomplete pairing response.");
     }
 
-    return payload as PairingStart;
+    return payload as RobotPairingStart;
   } catch (error) {
     sdk.setToken(null);
     throw error;

@@ -24,20 +24,22 @@ Then, in any chat with your agent:
 /pingroom connect
 ```
 
-Open the approval link or scan its QR, then sign in and choose which rooms the
-agent can reach. Each connection gets full PingRoom agent access but can reach
-only the rooms you choose. The plugin saves the credential and reusable
-latest-pings URL under `channels.pingroom`. The URL contains no credential;
-requests use the saved bearer token.
+Open the claim link or scan its QR. PingRoom has already created a separate
+OpenClaw robot profile, with its own `@handle` and robot avatar when the server
+supports identity previews. Sign in, claim that robot, and choose which rooms
+it can reach. It acts for you without becoming your personal PingRoom profile.
+The plugin saves the credential and reusable latest-pings URL under
+`channels.pingroom`. The URL contains no credential; requests use the saved
+bearer token.
 
 WebChat shows the short-lived pairing QR without saving it to chat history.
 Channels that support images receive the QR as an attachment. The approval
 link remains available as a fallback.
 
 All `/pingroom` connection-management actions are owner-only. `/pingroom
-status` shows the saved feed URL, and `/pingroom rooms` lists the current room
-grant. Reconnecting saves the replacement before revoking the previous
-plugin-owned credential. `/pingroom disconnect` revokes plugin-owned
+status` shows the saved feed URL, and `/pingroom rooms` lists the rooms the
+robot may reach. Reconnecting saves the replacement before revoking the
+previous plugin-owned credential. `/pingroom disconnect` revokes plugin-owned
 credentials; shared env, SecretRef, and CLI credentials are disabled locally
 without breaking their other consumers. The command is `connect`, never `pair`:
 OpenClaw's own `/pair` is DM allowlist pairing and means something else.
