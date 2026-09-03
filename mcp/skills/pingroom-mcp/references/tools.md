@@ -1,7 +1,7 @@
 # PingRoom MCP — complete tool reference
 
 Generated from the live `tools/list` of https://api.pingroom.io/api/agent/mcp
-(39 tools). Regenerate by POSTing `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
+(40 tools). Regenerate by POSTing `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
 to that endpoint. Every tool call is `tools/call`; in Claude Code the tools
 surface as `mcp__pingroom__<name>` when the server was added directly, or as
 `mcp__plugin_pingroom_mcp_pingroom__<name>` when it came from the PingRoom
@@ -369,6 +369,18 @@ Configure a numbered quick-action slot for a room the account owns.
   - `icon` (string) **(required)**. Emoji or icon id.
   - `sound` (string). Canonical sound id, e.g. "ting". Omit for the room default.
   - `requires_ack` (boolean). Whether pings from this action remain open until one eligible recipient acknowledges them.
+
+## update_quick_actions  [DI]
+
+Configure several of a room's quick-action slots in one call. Prefer this over repeated `update_quick_action`: each single-slot write wakes the owner's device with its own background refresh, so setting up four Pings one at a time spends four of a finite daily push budget on one operation. Slots you do not list are left exactly as they are, so this is also the right tool for editing a single Ping — nothing here deletes an action. Returns the room's full ordered action set.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+  - `actions` (array) **(required)** — 1–4 items. The slots to write. Each `action_number` must appear at most once. Each item takes:
+    - `action_number` (integer) **(required)** — 1–4. Quick-action slot number.
+    - `label` (string) **(required)** — ≤255 chars. Button label. Must be sent, but may be empty (`""`) — a Ping can be named by its emoji alone.
+    - `icon` (string) **(required)**. Emoji or icon id.
+    - `sound` (string). Canonical sound id, e.g. "ting". Omit for the room default.
+    - `requires_ack` (boolean). Whether pings from this action remain open until one eligible recipient acknowledges them.
 
 ## set_avatar  [DI]
 
