@@ -137,7 +137,7 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
               api.logger.info(text);
             },
             onPairingQrRenderError: () => {
-              api.logger.warn?.("Failed to render the PingRoom pairing QR; sending only the approval link");
+              api.logger.warn?.("Failed to render the PingRoom pairing QR; sending only the claim link");
             },
           },
         );

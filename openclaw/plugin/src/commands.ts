@@ -257,7 +257,6 @@ async function connect(ctx: CommandContext, deps: CommandDeps, args: string[]): 
           : "\nIt can now act for you only in the rooms you approved.";
         await deps.notify(
           `${claimed}${joined}.${reach}`
-            + (latestPings ? `\nLatest pings: ${latestPings}` : "")
             + previousCredentialNotice,
           ctx.sessionKey,
         );
@@ -273,7 +272,7 @@ async function connect(ctx: CommandContext, deps: CommandDeps, args: string[]): 
       const code = (error as { code?: unknown })?.code;
       await deps.notify(
         code === "pairing_expired" || /pairing link expired/i.test(reason)
-          ? "The PingRoom approval link expired. Run /pingroom connect again for a fresh one."
+          ? "The PingRoom claim link expired. Run /pingroom connect again for a fresh one."
           : `PingRoom pairing failed: ${reason}`,
         ctx.sessionKey,
       );
@@ -347,8 +346,8 @@ function pairingReply(
     : `a PingRoom robot profile for ${identity.displayName}`;
   return {
     text: hasQr
-      ? `Created ${robot}. Claim this robot to let it act for you.\nScan the QR with your phone, or open this approval link: ${pairUrl}\nExpires in ${expiresIn}.`
-      : `Created ${robot}. Claim this robot to let it act for you.\nOpen this approval link on your phone: ${pairUrl}\nThe link expires in ${expiresIn}.`,
+      ? `Created ${robot}. Claim this robot to let it act for you.\nScan the QR with your phone, or open this claim link: ${pairUrl}\nExpires in ${expiresIn}.`
+      : `Created ${robot}. Claim this robot to let it act for you.\nOpen this claim link on your phone: ${pairUrl}\nThe link expires in ${expiresIn}.`,
     presentation: {
       title: `Claim ${identity.displayName}`,
       tone: "info",
@@ -365,7 +364,7 @@ function pairingReply(
             { label: "Claim robot in PingRoom", style: "primary", action: { type: "url", url: pairUrl } },
           ],
         },
-        { type: "context", text: `Expires in ${expiresIn} · credentials are saved only after approval.` },
+        { type: "context", text: `Expires in ${expiresIn}. The credential is saved after you claim the robot.` },
       ],
     },
   };

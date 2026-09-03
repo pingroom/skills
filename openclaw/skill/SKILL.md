@@ -67,8 +67,9 @@ connection and revokes the previous one only after the replacement is saved.
 
 `pingroom pair --agent-label "OpenClaw" --json` prints one JSON object per line
 instead (`{"event":"pair_url",…}` first, `{"event":"connected",…}` last),
-which is easier to parse out of a process log. New servers include the harmless
-`agent.profile` identity in the pairing record; older servers omit it. The
+which is easier to parse out of a process log. New servers include
+`agent.profile` identity fields — display name, handle, and avatar — in the
+pairing record; older servers omit them. The
 connected record includes `links.latest_pings`, a stable URL for reading the
 newest pings later. Neither record prints the credential; the bearer remains in
 the saved credential file.

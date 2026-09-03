@@ -256,7 +256,7 @@ test("the shipped pairing path sends no scope field and preserves a self-hosted 
   assert.equal(token, "pending_token");
 });
 
-test("connect saves and announces the reusable latest-pings URL", async () => {
+test("connect saves the reusable latest-pings URL without cluttering its completion notice", async () => {
   const saved = [];
   const notices = [];
   let finishNotice;
@@ -307,7 +307,7 @@ test("connect saves and announces the reusable latest-pings URL", async () => {
   }]);
   assert.match(notices[0], /OpenClaw @openclaw was claimed by Mahdi and joined #Ops\./);
   assert.match(notices[0], /act for you in all current and future rooms/);
-  assert.match(notices[0], new RegExp(`Latest pings: ${latestPings.replaceAll("?", "\\?")}`));
+  assert.doesNotMatch(notices[0], /Latest pings:/);
 });
 
 test("connect preserves a self-hosted path prefix in the latest-pings fallback", async () => {
@@ -504,7 +504,7 @@ test("connect renders pair_url for servers that predate pair_qr_url", async () =
   assert.deepEqual(rendered, [PAIR_URL]);
 });
 
-test("connect keeps its approval link when QR rendering fails", async () => {
+test("connect keeps its claim link when QR rendering fails", async () => {
   const { deps, errors } = commandHarness({
     deps: {
       renderPairingQr: async () => { throw new Error("renderer unavailable"); },
@@ -527,7 +527,7 @@ test("connect keeps its approval link when QR rendering fails", async () => {
   assert.equal(reply.sensitiveMedia, undefined);
   assert.deepEqual(errors, ["failed"]);
   assert.match(reply.text, /^Created a PingRoom robot profile for OpenClaw\./);
-  assert.match(reply.text, /Open this approval link/);
+  assert.match(reply.text, /Open this claim link/);
   assert.match(reply.text, new RegExp(PAIR_URL.replaceAll("?", "\\?")));
   assert.equal(reply.presentation.blocks[1].buttons[0].action.url, PAIR_URL);
 });
