@@ -2,8 +2,9 @@
 
 Ready-to-install skills for reaching humans through
 [PingRoom](https://pingroom.io) — pings, files, locations, questions, approvals,
-handoffs, and lock-screen live progress. Two are
-[Claude Code](https://code.claude.com/docs) plugins; the third is for
+handoffs, and lock-screen live progress. Two are plugins and install in both
+[Claude Code](https://code.claude.com/docs) and
+[Grok Build](https://docs.x.ai/build/overview); the third is for
 [OpenClaw](https://docs.openclaw.ai).
 
 | Skill | Use it for |
@@ -28,6 +29,32 @@ specifics for OpenClaw's.
 /plugin install pingroom-mcp
 /plugin install pingroom-cli
 ```
+
+### As Grok Build plugins
+
+Grok Build reads the same `.claude-plugin/plugin.json` manifests, so both
+plugins install straight from this repo — `#mcp` and `#cli` select the
+subdirectory:
+
+```bash
+grok plugin install pingroom/skills#mcp
+grok plugin install pingroom/skills#cli
+```
+
+They are also submitted to the [official xAI
+marketplace](https://github.com/xai-org/plugin-marketplace), which Grok Build
+ships as a configured source. Once the catalog entry lands, `/marketplace`
+inside Grok Build lists them and the repo path is no longer needed:
+
+```bash
+grok plugin install pingroom-mcp
+grok plugin install pingroom-cli
+```
+
+Either way the plugins install under their manifest names, `pingroom-mcp` and
+`pingroom-cli` — that is what `grok plugin list`, `details` and `uninstall`
+expect. Grok resolves the MCP server from `mcp/.mcp.json`; authenticate once
+with `/mcps`.
 
 ### With the PingRoom CLI
 
@@ -122,14 +149,16 @@ full-access credential.
 
 ## Layout
 
-Each top-level directory is one Claude Code plugin, in the standard layout — a
+Each top-level directory is one plugin, in the standard layout — a
 `.claude-plugin/plugin.json` beside a `skills/` directory whose subdirectory
-name matches the skill's frontmatter `name`:
+name matches the skill's frontmatter `name`. Grok Build accepts the same
+manifest, so there is no second Grok-specific copy to keep in lockstep:
 
 ```
 .claude-plugin/marketplace.json   both plugins, for /plugin marketplace add
 mcp/
   .claude-plugin/plugin.json     also declares the hosted MCP server
+  .mcp.json                      the same server, where Grok Build looks
   skills/pingroom-mcp/SKILL.md
   skills/pingroom-mcp/references/tools.md
 cli/
