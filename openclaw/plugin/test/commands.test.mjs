@@ -58,7 +58,7 @@ test("help explains the mobile value while keeping installation separate from co
   assert.match(reply.text, new RegExp(INSTALL_APP_URL.replaceAll("/", "\\/")));
   assert.match(reply.text, /Installing the app does not claim a robot or grant it access/);
   assert.match(reply.text, /recipient_not_ready/);
-  assert.match(reply.text, /enable notifications, then run pingroom activate/);
+  assert.match(reply.text, /enable notifications, then run \/pingroom activate/);
   assert.match(reply.text, /\/pingroom connect/);
 });
 
@@ -720,4 +720,101 @@ test("disconnect wins when approval is already blocked inside credential storage
   assert.match(reply.text, /connection cancelled/i);
   assert.deepEqual(saved.map(({ token }) => token), ["new_token", ""]);
   assert.equal(revokeCalls, 1);
+});
+
+// The plugin's credential lives in channels.pingroom, which the `pingroom
+// activate` CLI command cannot read — it refuses --token and reads only its
+// own credentials.json. So the plugin runs the ceremony itself.
+test("activate runs the inbox ceremony with the plugin's own credential", async () => {
+  const notices = [];
+  let sent;
+  const noticeSent = new Promise((resolve) => { sent = resolve; });
+  let activateCalls = 0;
+  const { deps } = commandHarness({
+    deps: {
+      connectedClient: () => ({
+        inbox: {
+          activate: async () => { activateCalls += 1; return { activation_completed: true }; },
+        },
+      }),
+      notify: async (text) => { notices.push(text); sent(); },
+    },
+  });
+
+  const reply = await runCommand(ownerContext({
+    args: "activate",
+    channel: "webchat",
+    config: { channels: { pingroom: { token: "agent_token" } } },
+  }), deps);
+  await noticeSent;
+
+  assert.match(reply.text, /Check your phone/);
+  assert.equal(activateCalls, 1);
+  assert.match(notices[0], /verified/);
+});
+
+test("activate turns recipient_not_ready into install guidance and keeps the connection", async () => {
+  const notices = [];
+  let sent;
+  const noticeSent = new Promise((resolve) => { sent = resolve; });
+  const { deps } = commandHarness({
+    deps: {
+      connectedClient: () => ({
+        inbox: {
+          activate: async () => {
+            throw Object.assign(new Error("no device"), { code: "recipient_not_ready" });
+          },
+        },
+      }),
+      notify: async (text) => { notices.push(text); sent(); },
+    },
+  });
+
+  await runCommand(ownerContext({
+    args: "activate",
+    channel: "webchat",
+    config: { channels: { pingroom: { token: "agent_token" } } },
+  }), deps);
+  await noticeSent;
+
+  assert.match(notices[0], new RegExp(INSTALL_APP_URL.replaceAll("/", "\\/")));
+  assert.match(notices[0], /\/pingroom activate again/);
+  assert.match(notices[0], /connection itself is saved and usable/);
+});
+
+test("activate refuses a caller who is not the owner and never touches the API", async () => {
+  let activateCalls = 0;
+  const { deps } = commandHarness({
+    deps: {
+      connectedClient: () => ({
+        inbox: { activate: async () => { activateCalls += 1; return {}; } },
+      }),
+    },
+  });
+
+  const reply = await runCommand({
+    args: "activate",
+    senderIsOwner: false,
+    channel: "webchat",
+    config: { channels: { pingroom: { token: "agent_token" } } },
+  }, deps);
+
+  assert.match(reply.text, /Only the account owner/);
+  assert.equal(activateCalls, 0);
+});
+
+test("activate tells a disconnected channel to connect first", async () => {
+  // useCliCredential:false matters here — without it the config-less account
+  // resolves through the developer's own ~/.pingroom/credentials.json and the
+  // command looks connected on a maintainer's machine but not in CI.
+  const reply = await runCommand(
+    ownerContext({
+      args: "activate",
+      channel: "webchat",
+      config: { channels: { pingroom: { useCliCredential: false } } },
+    }),
+    commandHarness().deps,
+  );
+
+  assert.match(reply.text, /Run \/pingroom connect/);
 });

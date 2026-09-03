@@ -34,7 +34,7 @@ terminal to pair, `pingroom pair` where there is no terminal, or set
 - Not connected? Bare `pingroom` in an interactive terminal starts QR pairing.
   There is deliberately no `login` subcommand. On a machine with no terminal
   (daemon, container, agent runtime) run `pingroom pair` — it prints the
-  approval link, waits once, and exits 3 if the link expired. In CI, set
+  claim link, waits once, and exits 3 if the link expired. In CI, set
   `PINGROOM_TOKEN`; the CLI never prompts or draws a QR without a TTY.
 
 Before pairing, tell the human to install or open PingRoom and sign in at
@@ -44,10 +44,12 @@ the exact robot and choose its rooms. If a headless pairing process is already
 waiting, keep it running and reuse its claim link. If they leave to install,
 return to that link before it expires. Do not start another pairing.
 
-Successful pairing also prints and stores `links.latest_pings`, a stable URL
-for the newest pings across granted rooms, and `links.install_app`, the
-token-free mobile handoff. `links.latest_pings` contains no credential;
-authenticate requests to it with the bearer saved by the CLI.
+Successful pairing stores `links.latest_pings`, a stable URL for the newest
+pings across granted rooms, and `links.install_app`, the token-free mobile
+handoff. Both are printed by `pingroom pair --json` and by bare `pingroom`
+when it reports an existing connection, not by the interactive success screen.
+`links.latest_pings` contains no credential; authenticate requests to it with
+the bearer saved by the CLI.
 
 **Exit codes carry the human's answer**: 0 success/answered/acked/approved ·
 1 error · 2 bad usage · 3 expired · 4 cancelled/denied/not-ready. Build shell

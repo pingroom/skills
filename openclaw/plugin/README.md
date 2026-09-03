@@ -117,9 +117,11 @@ approval and audit metadata.
 If a private handoff or activation reports `recipient_not_ready`, keep the
 connection and show the server's explanation. Ask the person to install or update
 PingRoom at <https://pingroom.io/i>, open it, sign in, and enable notifications.
-Then run `pingroom activate`. Do not retry the original action until the test
-Question is answered and `pingroom activate` reports success; installation
-alone does not show that the phone is ready.
+Then run `/pingroom activate` in chat. It runs the activation ceremony with
+this plugin's own credential, so it works whether or not the CLI is installed.
+Do not retry the original action until the test Question is answered and
+activation reports success; installation alone does not show that the phone is
+ready.
 
 ## Development
 

@@ -41,7 +41,7 @@ metadata:
 `pingroom` is a Node ≥ 20 CLI that turns a step in your work into an event on a
 person's phone — a push they feel, a card on their lock screen, a question they
 answer with one tap — and turns their answer back into an exit code you can
-branch on. Requires `@pingroom/cli` ≥ 0.10.0.
+branch on. Requires `@pingroom/cli` ≥ 0.10.1.
 
 ## Connect first (no terminal needed)
 
@@ -198,7 +198,7 @@ pingroom handoff --question -m "Merge strategy?" -o squash:Squash -o rebase:Reba
 `approval` is the deploy gate (approve/deny card). `handoff` reaches the
 authorizing human privately — no room sees it (`--target me` is the default;
 `--expires-in 120..86400`, default 900). On `recipient_not_ready`, keep the
-connection and do not retry the original command until `pingroom activate`
+connection and do not retry the original command until `/pingroom activate`
 reports success after the person answers its test Question. Follow the recovery
 steps under Troubleshooting.
 
@@ -294,18 +294,18 @@ not need a shorter TTL. Two rules:
   start a 15-minute pairing poll from a non-interactive shell. Use
   `pingroom pair --agent-label "OpenClaw"`, which asks for exactly that.
 - `403 room_not_granted` — the room is outside what the human approved. Widen
-  it under Agents in the PingRoom app, or run the labeled pairing command again.
+  it under Connected Agents in the PingRoom app, or run the labeled pairing command again.
 - `403 insufficient_scope` — the credential has a legacy partial grant. Run
   the labeled pairing command once to replace it with a full-access credential.
 - `409 recipient_not_ready` — preserve the connection and relay the server's
   message. Have the human install or update <https://pingroom.io/i>, open it,
-  sign in, and enable notifications. Then run `pingroom activate`; retry the
-  original operation only after the person answers its test Question and
-  `pingroom activate` reports success. Installation alone does not show that the
-  phone is ready.
+  sign in, and enable notifications. Then run `/pingroom activate`, which uses
+  the plugin's own credential; retry the original operation only after the
+  person answers its test Question and activation reports success. Installation
+  alone does not show that the phone is ready.
 - `402 pro_required` — attachments and webhook management need a Pro account.
 - `pingroom logout` only clears the local file; the server-side credential stays
-  live. Revoke it under Agents, or let the labeled pairing command do it.
+  live. Revoke it under Connected Agents, or let the labeled pairing command do it.
 
 ## Reference
 

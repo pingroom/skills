@@ -108,6 +108,8 @@ export async function runCommand(ctx: CommandContext, deps: CommandDeps): Promis
       return { text: HELP };
     case "connect":
       return connect(ctx, deps, rest);
+    case "activate":
+      return activate(ctx, deps);
     case "status":
       return status(ctx);
     case "rooms":
@@ -123,9 +125,10 @@ const HELP = [
   "PingRoom — urgent Pings, questions, approvals, handoffs, and live progress on your phone.",
   `Install or open the app and sign in first: ${INSTALL_APP_URL}`,
   "Installing the app does not claim a robot or grant it access.",
-  "If delivery says recipient_not_ready: install/update, open, sign in, enable notifications, then run pingroom activate.",
+  "If delivery says recipient_not_ready: install/update, open, sign in, enable notifications, then run /pingroom activate.",
   "",
   "  /pingroom connect      Create and claim this robot on your phone (owner only)",
+  "  /pingroom activate     Send a test Question to confirm your phone can answer (owner only)",
   "  /pingroom status       Show the current connection (owner only)",
   "  /pingroom rooms        List rooms this agent may reach (owner only)",
   "  /pingroom disconnect   Disconnect this channel (owner only)",
@@ -133,6 +136,7 @@ const HELP = [
 
 const OWNER_ONLY_MESSAGES: Record<string, string> = {
   connect: "Only the account owner can connect PingRoom.",
+  activate: "Only the account owner can verify the PingRoom connection.",
   status: "Only the account owner can view the PingRoom connection.",
   rooms: "Only the account owner can list PingRoom rooms.",
   disconnect: "Only the account owner can disconnect PingRoom.",
@@ -576,6 +580,62 @@ function status(ctx: CommandContext): CommandReply {
     "  Free accounts get 20 agent operations per day.",
   ];
   return { text: lines.join("\n") };
+}
+
+/**
+ * Verify that the claimed robot can actually reach a phone, using THIS
+ * plugin's credential.
+ *
+ * The advice used to be "run pingroom activate" in a terminal, which cannot
+ * work: that command refuses `--token` and reads only the CLI's own
+ * credentials.json, while this plugin's token lives in `channels.pingroom`.
+ * Someone following it hit `no saved robot credential` and stopped. The
+ * plugin owns a credential, so it runs the ceremony itself.
+ */
+async function activate(ctx: CommandContext, deps: CommandDeps): Promise<CommandReply> {
+  const snapshot = inspectAccount(ctx.config);
+  if (!snapshot.enabled) return { text: "PingRoom is disconnected. Run /pingroom connect." };
+  if (!snapshot.configured) return { text: "PingRoom is not connected. Run /pingroom connect." };
+
+  const sdk = deps.connectedClient?.() ?? deps.createClient?.(snapshot.baseUrl);
+  if (!sdk) return { text: "PingRoom activation is unavailable right now." };
+
+  // Detached on purpose, like connect: activation waits for a human to answer
+  // a Question on their phone, which takes as long as it takes. The reply
+  // below has to reach them now so they know to look.
+  void (async () => {
+    try {
+      await sdk.inbox.activate();
+      await deps.notify(
+        "PingRoom is verified — your phone answered the test Question. Handoffs, questions and approvals will reach you.",
+        ctx.sessionKey,
+      );
+    } catch (error) {
+      await deps.notify(activationFailureText(error), ctx.sessionKey);
+    }
+  })();
+
+  return {
+    text: "Check your phone — PingRoom is sending a test Question to confirm delivery. Answer it and I'll confirm here.",
+  };
+}
+
+/** One sentence the owner can act on, per way activation can end badly. */
+function activationFailureText(error: unknown): string {
+  const code = (error as { code?: unknown; body?: { code?: unknown } })?.code
+    ?? (error as { body?: { code?: unknown } })?.body?.code;
+  const reason = error instanceof Error ? error.message : String(error);
+
+  if (code === "recipient_not_ready") {
+    return `PingRoom could not reach a phone. Install or update PingRoom at ${INSTALL_APP_URL}, open it, sign in, and enable notifications, then run /pingroom activate again. The connection itself is saved and usable.`;
+  }
+  if (code === "deadline_exceeded" || /deadline/i.test(reason)) {
+    return "No answer yet — the test Question is still waiting on your phone. Answer it, or run /pingroom activate again for a fresh one.";
+  }
+  if (code === "no_room_configured") {
+    return "This robot has no home room. Pick one under Connected Agents in the PingRoom app, then run /pingroom activate again.";
+  }
+  return `PingRoom activation failed: ${reason}`;
 }
 
 async function rooms(ctx: CommandContext, deps: CommandDeps): Promise<CommandReply> {
