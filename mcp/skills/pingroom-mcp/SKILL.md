@@ -31,12 +31,26 @@ Read `references/tools.md` for the full 40-tool schema reference when you need
 exact parameters. This file teaches you which tool to reach for and the rules
 that make the difference between "sent" and "landed".
 
+## Before authorization: get the phone ready
+
+If the human does not have PingRoom, send <https://pingroom.io/i> and explain
+that the app receives urgent Pings, questions, approvals, handoffs, and live
+progress on their phone. Ask them to install or open it and sign in before
+starting OAuth when possible.
+
+Installation is not consent. The human must still complete authorization,
+claim the separate MCP robot, and choose which rooms it may reach. If OAuth is
+already waiting in the browser, have them return to that same flow after
+installation instead of starting another connection.
+
 ## Keep the connection receipt
 
 Call `connection_info` once after OAuth completes and retain
-`links.latest_pings`. It is a stable GET URL for the newest pings visible across
-the granted rooms. The URL contains no credential; send the connection's saved
-bearer token in the `Authorization` header when fetching it later.
+`links.latest_pings` and `links.install_app`. The first is a stable GET URL for
+the newest pings visible across the granted rooms; the second is the token-free
+mobile handoff, and must never receive a credential. `links.latest_pings`
+contains no credential, so send the connection's saved bearer token in the
+`Authorization` header when fetching it.
 
 ## The one rule that matters
 
@@ -193,8 +207,11 @@ user_id: "me" }, options? (question only), urgency?, expires_in? }` reaches
 the one human who authorized this agent — a private loop no room member sees.
 Use it when the decision belongs to *your* human specifically, not to a room.
 Block with `wait_for_handoff`. If creation fails with recipient-not-ready, the
-human's device hasn't enabled the Handoff surface — `activate_agent_inbox`
-sends them a one-tap activation, then retry.
+phone is not ready for the Handoff surface. Keep the connection and show the
+server's explanation and install link. Have the human install or update
+PingRoom, open it, sign in, and enable notifications. Then call
+`activate_agent_inbox`; do not retry the handoff until the person answers its
+test Question and the result reports `activation_completed: true`.
 
 ### Live progress on the lock screen
 For work longer than ~30 seconds, run a live card instead of spamming pings:
@@ -246,6 +263,7 @@ on the code, don't retry blindly:
 | `pro_required` | Attachments/webhooks need Pro. Say so; don't loop. |
 | `room_not_granted` | Room is outside this agent's grant. Ask the human to add it under Connected Agents, or pick a granted room. |
 | `insufficient_scope` / `invalid_credential` | The token uses a legacy partial grant or the wrong audience. Reconnect once for full access, or use the CLI with its separate credential. |
+| `recipient_not_ready` | Keep the connection. Share the returned `install_url`, then have the human install or update PingRoom, open it, sign in, and enable notifications. Call `activate_agent_inbox` again, then wait for the person to answer its test Question and for `activation_completed: true`; installation alone does not prove the phone is ready. |
 | `attachment_too_large` | Over the MCP result cap — use `pingroom attachment get <id> --out …`. |
 | `validation_failed` | Read the message; commonly a public room with no other member, an unsupported room type, or a length cap. |
 | `quota_exceeded` / HTTP 429 | Back off; respect Retry-After. Never hot-loop a wait tool — they long-poll server-side already. |

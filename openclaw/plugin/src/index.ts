@@ -1,7 +1,7 @@
 import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk/channel-core";
 import { pingroomChannelPlugin } from "./channel.js";
-import { CHANNEL_ID, PLUGIN_ID } from "./constants.js";
+import { CHANNEL_ID, INSTALL_APP_URL, PLUGIN_ID } from "./constants.js";
 import { runCommand } from "./commands.js";
 import type { PendingPairing } from "./commands.js";
 import { inspectAccount } from "./config.js";
@@ -53,8 +53,13 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
       agentPromptGuidance: [
         {
           text:
-            "PingRoom reaches the user's phone. If the user is not connected, tell them to run "
-            + "/pingroom connect and approve the link — do not try to pair by any other means.",
+            "PingRoom delivers urgent Pings, questions, approvals, handoffs, and live progress on the user's phone. "
+            + `Before /pingroom connect when possible, send ${INSTALL_APP_URL} and ask the user to install or open `
+            + "PingRoom and sign in. Installation is not consent: they must still claim the exact robot and choose "
+            + "its rooms. If a pairing is already pending, run /pingroom connect to reuse that robot and claim link "
+            + "before it expires; do not start another pairing. On recipient_not_ready, keep the "
+            + "connection, relay the server's message, have them install or update the app, open it, sign in, and "
+            + "enable notifications; then run pingroom activate before retrying.",
         } as never,
       ],
       handler: async (ctx: {

@@ -12,10 +12,11 @@ Annotations: R = read-only, D = destructive, I = idempotent.
 
 ## connection_info  [RI]
 
-Return this connection's handle, room-access mode, and stable authenticated
-links. `links.latest_pings` is a newest-first GET feed across the granted rooms.
-The URL contains no credential; use the saved MCP bearer token in the
-`Authorization` header.
+Return this connection's handle, room-access mode, and stable links.
+`links.latest_pings` is a newest-first GET feed across the granted rooms and
+requires the saved MCP bearer token in the `Authorization` header.
+`links.install_app` is the token-free mobile handoff; never send credentials to
+that URL.
 
   (no arguments)
 
@@ -219,7 +220,7 @@ Withdraw a still-pending question you asked.
 
 ## activate_agent_inbox  [–]
 
-Start or resume the onboarding Question in the private room the human chose during authorization. Read question.id, then call wait_for_handoff only while state is pending and within a bounded local deadline. Success is answered with activation_completed true. Any other terminal result is incomplete: stop polling that attempt, then call activate_agent_inbox again for one numbered retry. The stamp requires native phone receipt before the human answer.
+Start or resume the onboarding Question in the private room the human chose during authorization. If recipient_not_ready, share install_url and ask the human to install or update PingRoom, open the app, sign in, and enable notifications before retrying. Read question.id, then call wait_for_handoff only while state is pending and within a bounded local deadline. Success is answered with activation_completed true. Any other terminal result is incomplete: stop polling that attempt, then call activate_agent_inbox again for one numbered retry. The stamp requires native phone receipt before the human answer.
 
   (no arguments)
 

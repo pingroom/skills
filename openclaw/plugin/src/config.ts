@@ -11,7 +11,7 @@ export interface PingRoomChannelConfig {
   baseUrl?: string;
   agentLabel?: string;
   defaultRoom?: string;
-  links?: { latest_pings?: string };
+  links?: { latest_pings?: string; install_app?: string };
   dmPolicy?: string;
   allowFrom?: string[];
   urgency?: "normal" | "urgent";
@@ -89,7 +89,7 @@ function readCliCredential(env: NodeJS.ProcessEnv): {
   token?: string;
   api_url?: string;
   room?: { invite_code?: string };
-  links?: { latest_pings?: string };
+  links?: { latest_pings?: string; install_app?: string };
 } | null {
   const path = cliCredentialPath(env);
   if (!existsSync(path)) return null;

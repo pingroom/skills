@@ -45,8 +45,19 @@ branch on. Requires `@pingroom/cli` ≥ 0.10.0.
 
 ## Connect first (no terminal needed)
 
-OpenClaw runs as a daemon, so there is no terminal to scan a QR with. Use the
-headless flow:
+Before starting a pairing, explain why PingRoom is needed and send:
+
+> Install or open PingRoom and sign in: https://pingroom.io/i. The app receives
+> urgent Pings, questions, approvals, handoffs, and live progress on your phone.
+
+Installation is not consent. The human must still claim the exact robot and
+choose its room access. Ask them to install or open the app and sign in before
+starting the short-lived pairing when possible.
+
+OpenClaw runs as a daemon, so there is no terminal to scan a QR with. If a
+`pingroom pair` process is already waiting, read its output with the `process`
+tool, keep it running, and reuse its robot identity and claim link before the
+link expires. Do not start another pairing. Otherwise use the headless flow:
 
 ```bash
 pingroom pair --agent-label "OpenClaw"
@@ -55,24 +66,28 @@ pingroom pair --agent-label "OpenClaw"
 It creates an OpenClaw robot profile, prints its claim link, and waits. **Relay
 that link to the human** — send it in the current conversation — and include the
 robot name and `@handle` when printed so they know exactly what they are
-claiming. The link expires in 15 minutes. On their phone they sign in, claim the
-robot, and choose which rooms it may reach. The robot acts for them; it does not
-become their personal PingRoom profile.
+claiming. If they leave to install, keep the process running and tell them to
+return to that same claim link before it expires. On their phone they sign in,
+claim the robot, and choose which rooms it may reach. The robot acts for them;
+it does not become their personal PingRoom profile.
 
 The command is long-running: OpenClaw backgrounds it after a few seconds, so
 follow it with the `process` tool to read the link and to see the result. Exit
 0 means paired; exit 3 means the link expired — run it again for a fresh one.
-Re-running the labeled command when already paired creates a replacement
+Do not start a second command while the first is pending. Re-running the
+labeled command after a completed pairing intentionally creates a replacement
 connection and revokes the previous one only after the replacement is saved.
 
 `pingroom pair --agent-label "OpenClaw" --json` prints one JSON object per line
 instead (`{"event":"pair_url",…}` first, `{"event":"connected",…}` last),
 which is easier to parse out of a process log. New servers include
 `agent.profile` identity fields — display name, handle, and avatar — in the
-pairing record; older servers omit them. The
-connected record includes `links.latest_pings`, a stable URL for reading the
-newest pings later. Neither record prints the credential; the bearer remains in
-the saved credential file.
+pairing record; older servers omit them. The connected record includes
+`links.latest_pings`, a stable URL for reading the newest pings later. Both JSON
+events include the token-free
+`links.install_app` (`https://pingroom.io/i`) for agents to relay. Never append
+the pair token to that URL. Neither record prints the credential; the bearer
+remains in the saved credential file.
 
 ### Or use a token
 
@@ -182,9 +197,10 @@ pingroom handoff --question -m "Merge strategy?" -o squash:Squash -o rebase:Reba
 
 `approval` is the deploy gate (approve/deny card). `handoff` reaches the
 authorizing human privately — no room sees it (`--target me` is the default;
-`--expires-in 120..86400`, default 900). If
-the recipient's device isn't ready, `pingroom activate` sends the one-tap
-Agent Inbox activation, then retry.
+`--expires-in 120..86400`, default 900). On `recipient_not_ready`, keep the
+connection and do not retry the original command until `pingroom activate`
+reports success after the person answers its test Question. Follow the recovery
+steps under Troubleshooting.
 
 ## Live progress cards
 
@@ -281,6 +297,12 @@ not need a shorter TTL. Two rules:
   it under Agents in the PingRoom app, or run the labeled pairing command again.
 - `403 insufficient_scope` — the credential has a legacy partial grant. Run
   the labeled pairing command once to replace it with a full-access credential.
+- `409 recipient_not_ready` — preserve the connection and relay the server's
+  message. Have the human install or update <https://pingroom.io/i>, open it,
+  sign in, and enable notifications. Then run `pingroom activate`; retry the
+  original operation only after the person answers its test Question and
+  `pingroom activate` reports success. Installation alone does not show that the
+  phone is ready.
 - `402 pro_required` — attachments and webhook management need a Pro account.
 - `pingroom logout` only clears the local file; the server-side credential stays
   live. Revoke it under Agents, or let the labeled pairing command do it.

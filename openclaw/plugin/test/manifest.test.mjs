@@ -16,6 +16,10 @@ test("the manifest declares the channel OpenClaw will look for", () => {
   assert.equal(manifest.channelConfigs.pingroom.schema.additionalProperties, false);
   assert.equal(manifest.channelConfigs.pingroom.schema.properties.scopes, undefined);
   assert.ok(manifest.channelConfigs.pingroom.schema.properties.links.properties.latest_pings);
+  assert.equal(
+    manifest.channelConfigs.pingroom.schema.properties.links.properties.install_app.const,
+    "https://pingroom.io/i",
+  );
 });
 
 test("activation is declared explicitly", () => {

@@ -49,7 +49,8 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "latest_pings": { "type": "string", "format": "uri", "pattern": "^https://" }
+              "latest_pings": { "type": "string", "format": "uri", "pattern": "^https://" },
+              "install_app": { "type": "string", "const": "https://pingroom.io/i" }
             }
           },
           "dmPolicy": { "type": "string", "enum": ["allowlist", "open", "disabled"], "default": "allowlist" },
@@ -105,6 +106,7 @@
         "token": { "label": "Agent credential", "sensitive": true, "help": "Approve one with /pingroom connect instead of pasting it." },
         "defaultRoom": { "label": "Delivery room (invite code)" },
         "links.latest_pings": { "label": "Latest pings URL", "advanced": true },
+        "links.install_app": { "label": "Install PingRoom URL", "advanced": true },
         "allowFrom": { "label": "Room members allowed to talk to the agent (PingRoom user ids)" },
         "urgency": { "label": "Deliver pings time-sensitive", "advanced": true },
         "visibleReplies": { "label": "Which replies become pings", "advanced": true },

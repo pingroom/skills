@@ -5,6 +5,7 @@ import { runCommand, startServerOwnedPairing } from "../dist/commands.js";
 
 const PAIR_URL = "https://api.pingroom.io/pair?token=pair_123";
 const PAIR_QR_URL = "https://pingroom.io/app/agents/pair?token=pair_123";
+const INSTALL_APP_URL = "https://pingroom.io/i";
 
 function ownerContext(context) {
   return { ...context, senderIsOwner: true };
@@ -15,6 +16,7 @@ function commandHarness(overrides = {}) {
     pair_token: "pair_123",
     pair_url: PAIR_URL,
     pair_qr_url: PAIR_QR_URL,
+    app_install_url: INSTALL_APP_URL,
     expires_in: 900,
     poll_interval_ms: 1500,
     ...overrides.pairing,
@@ -48,6 +50,17 @@ function commandHarness(overrides = {}) {
   };
   return { deps, errors, pairingRequests, rendered };
 }
+
+test("help explains the mobile value while keeping installation separate from consent", async () => {
+  const reply = await runCommand({ args: "help", config: {} }, commandHarness().deps);
+
+  assert.match(reply.text, /urgent Pings, questions, approvals, handoffs, and live progress/);
+  assert.match(reply.text, new RegExp(INSTALL_APP_URL.replaceAll("/", "\\/")));
+  assert.match(reply.text, /Installing the app does not claim a robot or grant it access/);
+  assert.match(reply.text, /recipient_not_ready/);
+  assert.match(reply.text, /enable notifications, then run pingroom activate/);
+  assert.match(reply.text, /\/pingroom connect/);
+});
 
 test("connection management fails closed when owner identity is missing or false", async () => {
   for (const args of ["connect", "status", "rooms", "disconnect"]) {
@@ -117,10 +130,16 @@ test("connect gives WebChat an ephemeral native pairing QR without client-select
   assert.deepEqual(rendered, [], "WebChat owns live QR rendering");
   assert.deepEqual(pairingRequests, [{ agent_label: "OpenClaw" }]);
   assert.match(reply.text, /^Created a PingRoom robot profile for OpenClaw\./);
-  assert.match(reply.text, /Claim this robot to let it act for you\./);
+  assert.match(reply.text, /Install or open PingRoom and sign in first/);
+  assert.match(reply.text, /urgent Pings, questions, approvals, handoffs, and live progress/);
+  assert.match(reply.text, /Installing the app does not claim this robot or grant it access/);
   assert.match(reply.text, new RegExp(PAIR_URL.replaceAll("?", "\\?")));
   assert.equal(reply.presentation.title, "Claim OpenClaw");
   assert.equal(reply.presentation.blocks[1].buttons[0].label, "Claim robot in PingRoom");
+  assert.equal(reply.presentation.blocks[1].buttons[0].action.url, PAIR_URL);
+  assert.equal(reply.presentation.blocks[1].buttons[1].label, "Install or open PingRoom");
+  assert.equal(reply.presentation.blocks[1].buttons[1].action.url, INSTALL_APP_URL);
+  assert.doesNotMatch(reply.presentation.blocks[1].buttons[1].action.url, /pair_123|token=/);
 });
 
 test("connect names the precreated robot profile before the owner signs in", async () => {
@@ -148,7 +167,7 @@ test("connect names the precreated robot profile before the owner signs in", asy
   );
 
   assert.match(reply.text, /^Created OpenClaw @agt_openclaw\./);
-  assert.match(reply.text, /Claim this robot/);
+  assert.match(reply.text, /claim this robot/);
   assert.match(reply.presentation.blocks[0].text, /separate robot profile/);
 });
 
@@ -199,8 +218,9 @@ test("repeated connect keeps the ceremony's original expiry", async () => {
     deps,
   );
 
-  assert.match(first.text, /Expires in 15 minutes/);
-  assert.match(repeated.text, /Expires in 1 minute\./);
+  assert.match(first.text, /link expires in 15 minutes/);
+  assert.match(repeated.text, /link expires in 1 minute\./);
+  assert.match(repeated.presentation.blocks[2].text, /returns the same robot and claim link/);
   assert.equal(
     repeated.channelData.openclawPairingQr.expiresAtMs,
     first.channelData.openclawPairingQr.expiresAtMs,
@@ -225,6 +245,7 @@ test("the shipped pairing path sends no scope field and preserves a self-hosted 
       pair_token: "pair_123",
       pair_url: PAIR_URL,
       pair_qr_url: PAIR_QR_URL,
+      app_install_url: INSTALL_APP_URL,
       expires_in: 900,
       poll_interval_ms: 1500,
       flow_version: 2,
@@ -244,6 +265,7 @@ test("the shipped pairing path sends no scope field and preserves a self-hosted 
   assert.equal(pairing.flow_version, 2);
   assert.equal(pairing.claim_mode, "agent_identity");
   assert.equal(pairing.agent.profile.handle, "agt_openclaw");
+  assert.equal(pairing.app_install_url, INSTALL_APP_URL);
   assert.deepEqual(calls[0], {
     path: "/api/agent/auth",
     body: { type: "anonymous", agent_label: "OpenClaw" },
@@ -256,7 +278,7 @@ test("the shipped pairing path sends no scope field and preserves a self-hosted 
   assert.equal(token, "pending_token");
 });
 
-test("connect saves the reusable latest-pings URL without cluttering its completion notice", async () => {
+test("connect saves reusable read/install links without cluttering its completion notice", async () => {
   const saved = [];
   const notices = [];
   let finishNotice;
@@ -284,7 +306,7 @@ test("connect saves the reusable latest-pings URL without cluttering its complet
               label: "OpenClaw",
               profile: { display_name: "OpenClaw", handle: "openclaw" },
             },
-            links: { latest_pings: latestPings },
+            links: { latest_pings: latestPings, install_app: INSTALL_APP_URL },
           }),
         },
       }),
@@ -303,7 +325,7 @@ test("connect saves the reusable latest-pings URL without cluttering its complet
     token: "agent_token",
     defaultRoom: "room123",
     handle: "openclaw",
-    links: { latest_pings: latestPings },
+    links: { latest_pings: latestPings, install_app: INSTALL_APP_URL },
   }]);
   assert.match(notices[0], /OpenClaw @openclaw was claimed by Mahdi and joined #Ops\./);
   assert.match(notices[0], /act for you in all current and future rooms/);
@@ -337,6 +359,7 @@ test("connect preserves a self-hosted path prefix in the latest-pings fallback",
     saved[0].links.latest_pings,
     "https://self-hosted.test/pingroom/api/agent/notifications?limit=25&page=1",
   );
+  assert.equal(saved[0].links.install_app, INSTALL_APP_URL);
 });
 
 test("an expired pairing waiter cannot overwrite its replacement", async () => {
@@ -468,6 +491,7 @@ test("connect attaches a managed sensitive PNG on external channels", async () =
     trustedLocalMedia: true,
   }]);
   assert.equal(reply.presentation.blocks[1].buttons[0].action.url, PAIR_URL);
+  assert.equal(reply.presentation.blocks[1].buttons[1].action.url, INSTALL_APP_URL);
 });
 
 test("connect describes the expiry reported by the pairing server", async () => {
@@ -485,8 +509,8 @@ test("connect describes the expiry reported by the pairing server", async () => 
     deps,
   );
 
-  assert.match(reply.text, /Expires in 2 minutes\./);
-  assert.match(reply.presentation.blocks[2].text, /Expires in 2 minutes/);
+  assert.match(reply.text, /link expires in 2 minutes\./);
+  assert.match(reply.presentation.blocks[2].text, /link expires in 2 minutes/);
 });
 
 test("connect renders pair_url for servers that predate pair_qr_url", async () => {
@@ -527,9 +551,27 @@ test("connect keeps its claim link when QR rendering fails", async () => {
   assert.equal(reply.sensitiveMedia, undefined);
   assert.deepEqual(errors, ["failed"]);
   assert.match(reply.text, /^Created a PingRoom robot profile for OpenClaw\./);
-  assert.match(reply.text, /Open this claim link/);
+  assert.match(reply.text, /return before then/);
   assert.match(reply.text, new RegExp(PAIR_URL.replaceAll("?", "\\?")));
   assert.equal(reply.presentation.blocks[1].buttons[0].action.url, PAIR_URL);
+  assert.equal(reply.presentation.blocks[1].buttons[1].action.url, INSTALL_APP_URL);
+});
+
+test("connect never turns a server-controlled or token-bearing URL into the install action", async () => {
+  const { deps } = commandHarness({
+    pairing: {
+      links: { install_app: `${INSTALL_APP_URL}?token=pair_123` },
+    },
+  });
+
+  const reply = await runCommand(
+    ownerContext({ args: "connect", channel: "webchat", config: {} }),
+    deps,
+  );
+
+  const install = reply.presentation.blocks[1].buttons[1].action.url;
+  assert.equal(install, INSTALL_APP_URL);
+  assert.doesNotMatch(install, /pair_123|token=/);
 });
 
 test("rooms uses the authenticated production client seam", async () => {

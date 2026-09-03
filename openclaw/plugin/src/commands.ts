@@ -1,7 +1,7 @@
 import { PingRoom } from "@pingroom/sdk";
 import type { PairingStart } from "@pingroom/sdk";
 import type { ReplyPayload } from "openclaw/plugin-sdk/reply-payload";
-import { AGENT_LABEL, DEFAULT_BASE_URL, USER_AGENT } from "./constants.js";
+import { AGENT_LABEL, DEFAULT_BASE_URL, INSTALL_APP_URL, USER_AGENT } from "./constants.js";
 import { apiEndpointUrl, inspectAccount, readChannelConfig } from "./config.js";
 
 const PAIRING_QR_MAX_BYTES = 1024 * 1024;
@@ -48,6 +48,9 @@ type RobotPairingStart = PairingStart & {
   flow_version?: number;
   claim_mode?: string;
   agent?: RobotAgent;
+  app_install_url?: string;
+  links?: { install_app?: string };
+  mobile_app?: { install_url?: string };
 };
 
 interface RoomSummary {
@@ -61,7 +64,7 @@ export interface CommandDeps {
     token: string;
     defaultRoom?: string;
     handle?: string;
-    links?: { latest_pings: string };
+    links?: { latest_pings?: string; install_app?: string };
   }) => Promise<void>;
   /** Announce an out-of-band result into the session that ran the command. */
   notify: (text: string, sessionKey?: string) => Promise<void>;
@@ -117,7 +120,10 @@ export async function runCommand(ctx: CommandContext, deps: CommandDeps): Promis
 }
 
 const HELP = [
-  "PingRoom — reach your phone from this agent.",
+  "PingRoom — urgent Pings, questions, approvals, handoffs, and live progress on your phone.",
+  `Install or open the app and sign in first: ${INSTALL_APP_URL}`,
+  "Installing the app does not claim a robot or grant it access.",
+  "If delivery says recipient_not_ready: install/update, open, sign in, enable notifications, then run pingroom activate.",
   "",
   "  /pingroom connect      Create and claim this robot on your phone (owner only)",
   "  /pingroom status       Show the current connection (owner only)",
@@ -219,7 +225,7 @@ async function connect(ctx: CommandContext, deps: CommandDeps, args: string[]): 
           return;
         }
 
-        const latestPings = latestPingsUrl(credential, baseUrl);
+        const links = connectionLinks(credential, baseUrl);
         const pairingIdentity = agentIdentity(
           pending.pairing,
           pending.agentLabel ?? AGENT_LABEL,
@@ -231,7 +237,7 @@ async function connect(ctx: CommandContext, deps: CommandDeps, args: string[]): 
           token: credential.credential,
           ...(homeRoom?.invite_code ? { defaultRoom: homeRoom.invite_code } : {}),
           ...(identity.handle ? { handle: identity.handle } : {}),
-          ...(latestPings ? { links: { latest_pings: latestPings } } : {}),
+          links,
         });
         deps.ownedClients.set(accountKey, sdk);
         approvedCredentialNeedsCleanup = false;
@@ -340,14 +346,15 @@ function pairingReply(
   hasQr: boolean,
 ): CommandReply {
   const pairUrl = pairing.pair_url;
+  const installUrl = installAppUrl(pairing);
   const identity = agentIdentity(pairing, fallbackLabel);
   const robot = identity.handle
     ? `${identity.displayName} @${identity.handle}`
     : `a PingRoom robot profile for ${identity.displayName}`;
   return {
     text: hasQr
-      ? `Created ${robot}. Claim this robot to let it act for you.\nScan the QR with your phone, or open this claim link: ${pairUrl}\nExpires in ${expiresIn}.`
-      : `Created ${robot}. Claim this robot to let it act for you.\nOpen this claim link on your phone: ${pairUrl}\nThe link expires in ${expiresIn}.`,
+      ? `Created ${robot}.\nInstall or open PingRoom and sign in first: ${installUrl}\nThe app receives urgent Pings, questions, approvals, handoffs, and live progress on your phone.\nScan the QR or open this claim link: ${pairUrl}\nUse it to claim this robot and choose its rooms. The link expires in ${expiresIn}. If you leave to install the app, return before then. Installing the app does not claim this robot or grant it access.`
+      : `Created ${robot}.\nInstall or open PingRoom and sign in first: ${installUrl}\nThe app receives urgent Pings, questions, approvals, handoffs, and live progress on your phone.\nOpen this claim link on your phone: ${pairUrl}\nUse it to claim this robot and choose its rooms. The link expires in ${expiresIn}. If you leave to install the app, return before then. Installing the app does not claim this robot or grant it access.`,
     presentation: {
       title: `Claim ${identity.displayName}`,
       tone: "info",
@@ -355,16 +362,20 @@ function pairingReply(
         {
           type: "text",
           text: hasQr
-            ? "This is a separate robot profile, not your personal PingRoom profile. Scan the QR or open the link, sign in, and choose which rooms it may reach."
-            : "This is a separate robot profile, not your personal PingRoom profile. Open the link, sign in, and choose which rooms it may reach.",
+            ? "Install or open PingRoom and sign in first. It is where urgent Pings, questions, approvals, handoffs, and live progress arrive. Then scan the QR or open the claim link, claim this separate robot profile, and choose which rooms it may reach. Installing the app does not claim the robot or grant it access."
+            : "Install or open PingRoom and sign in first. It is where urgent Pings, questions, approvals, handoffs, and live progress arrive. Then open the claim link, claim this separate robot profile, and choose which rooms it may reach. Installing the app does not claim the robot or grant it access.",
         },
         {
           type: "buttons",
           buttons: [
             { label: "Claim robot in PingRoom", style: "primary", action: { type: "url", url: pairUrl } },
+            { label: "Install or open PingRoom", action: { type: "url", url: installUrl } },
           ],
         },
-        { type: "context", text: `Expires in ${expiresIn}. The credential is saved after you claim the robot.` },
+        {
+          type: "context",
+          text: `This link expires in ${expiresIn}. If you leave to install the app, return before then. While this pairing is pending, /pingroom connect returns the same robot and claim link.`,
+        },
       ],
     },
   };
@@ -403,6 +414,30 @@ function pairingQrUrl(pairing: unknown): string | undefined {
 
 function cleanText(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+/** Refuse server-controlled install destinations or query-bearing claim data. */
+function installAppUrl(payload: unknown): string {
+  const value = payload && typeof payload === "object"
+    ? payload as {
+      app_install_url?: unknown;
+      install_app?: unknown;
+      install_url?: unknown;
+      links?: { install_app?: unknown };
+      mobile_app?: { install_url?: unknown };
+    }
+    : {};
+  const candidates = [
+    value.app_install_url,
+    value.install_app,
+    value.install_url,
+    value.links?.install_app,
+    value.mobile_app?.install_url,
+  ];
+  for (const candidate of candidates) {
+    if (cleanText(candidate) === INSTALL_APP_URL) return INSTALL_APP_URL;
+  }
+  return INSTALL_APP_URL;
 }
 
 /** Resolve the additive robot identity while retaining every legacy fallback. */
@@ -451,6 +486,17 @@ function latestPingsUrl(credential: unknown, baseUrl: string): string | undefine
   } catch {
     return undefined;
   }
+}
+
+function connectionLinks(
+  credential: unknown,
+  baseUrl: string,
+): { latest_pings?: string; install_app: string } {
+  const latestPings = latestPingsUrl(credential, baseUrl);
+  return {
+    ...(latestPings ? { latest_pings: latestPings } : {}),
+    install_app: installAppUrl(credential),
+  };
 }
 
 /**

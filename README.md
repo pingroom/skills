@@ -74,6 +74,13 @@ The channel plugin beside it publishes to npm as
 openclaw plugins install npm:@pingroom/openclaw-plugin
 ```
 
+Have the person install or open PingRoom and sign in before pairing:
+<https://pingroom.io/i>. The app receives urgent Pings, questions, approvals,
+handoffs, and live progress. Installation is not consent; they must still use
+the claim link to claim the exact robot and choose its rooms. If a pairing is
+already pending, keep it running and return to the same claim link after
+installation and before it expires. Do not start another pairing.
+
 Then connect the CLI without a terminal:
 
 ```bash

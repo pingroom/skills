@@ -18,6 +18,11 @@ openclaw plugins install npm:@pingroom/openclaw-plugin
 openclaw plugins enable pingroom
 ```
 
+Before connecting, install or open PingRoom on your phone and sign in:
+<https://pingroom.io/i>. The app receives urgent Pings, questions, approvals,
+handoffs, and live progress. Installing it does not claim the robot or grant it
+access.
+
 Then, in any chat with your agent:
 
 ```
@@ -28,13 +33,15 @@ Open the claim link or scan its QR. PingRoom has already created a separate
 OpenClaw robot profile, with its own `@handle` and robot avatar when the server
 supports identity previews. Sign in, claim that robot, and choose which rooms
 it can reach. It acts for you without becoming your personal PingRoom profile.
-The plugin saves the credential and reusable latest-pings URL under
-`channels.pingroom`. The URL contains no credential; requests use the saved
-bearer token.
+The plugin saves the credential, reusable latest-pings URL, and token-free
+app-install URL under `channels.pingroom`. The latest-pings URL contains no
+credential; requests to it use the saved bearer token.
 
 WebChat shows the short-lived pairing QR without saving it to chat history.
-Channels that support images receive the QR as an attachment. The approval
-link remains available as a fallback.
+Channels that support images receive the QR as an attachment. The claim link
+remains available if the QR cannot be scanned. If you leave the claim screen to
+install the app, return to that exact link before it expires. While pairing is
+pending, `/pingroom connect` returns the same robot and claim link.
 
 All `/pingroom` connection-management actions are owner-only. `/pingroom
 status` shows the saved feed URL, and `/pingroom rooms` lists the rooms the
@@ -71,6 +78,7 @@ Everything lives under `channels.pingroom`:
       defaultRoom: "ab12cd",     // where "me" goes
       links: {
         latest_pings: "https://api.pingroom.io/api/agent/notifications?limit=25&page=1",
+        install_app: "https://pingroom.io/i",
       },
       urgency: "normal",          // "urgent" pierces Focus
       visibleReplies: "final",    // "all" also pings tool/block output
@@ -105,6 +113,13 @@ The plugin bundles the `pingroom` skill and contributes `PINGROOM_HOME` to
 environment. Set `execEnv.injectToken` only if your agent runs sandboxed and
 cannot read the gateway's filesystem — hook-contributed env appears in Gateway
 approval and audit metadata.
+
+If a private handoff or activation reports `recipient_not_ready`, keep the
+connection and show the server's explanation. Ask the person to install or update
+PingRoom at <https://pingroom.io/i>, open it, sign in, and enable notifications.
+Then run `pingroom activate`. Do not retry the original action until the test
+Question is answered and `pingroom activate` reports success; installation
+alone does not show that the phone is ready.
 
 ## Development
 

@@ -6,6 +6,8 @@ export const PLUGIN_VERSION = "0.1.2";
 export const USER_AGENT = `pingroom-openclaw-plugin/${PLUGIN_VERSION}`;
 export const DEFAULT_BASE_URL = "https://api.pingroom.io";
 export const AGENT_LABEL = "OpenClaw";
+/** Token-free smart install handoff shared by every agent-facing surface. */
+export const INSTALL_APP_URL = "https://pingroom.io/i";
 
 /**
  * PingRoom Ping limits, mirrored from the API's own validation so a reply is

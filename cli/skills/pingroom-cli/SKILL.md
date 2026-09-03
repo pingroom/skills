@@ -37,9 +37,17 @@ terminal to pair, `pingroom pair` where there is no terminal, or set
   approval link, waits once, and exits 3 if the link expired. In CI, set
   `PINGROOM_TOKEN`; the CLI never prompts or draws a QR without a TTY.
 
+Before pairing, tell the human to install or open PingRoom and sign in at
+<https://pingroom.io/i>. The app receives urgent Pings, questions, approvals,
+handoffs, and live progress. Installation is not consent; they must still claim
+the exact robot and choose its rooms. If a headless pairing process is already
+waiting, keep it running and reuse its claim link. If they leave to install,
+return to that link before it expires. Do not start another pairing.
+
 Successful pairing also prints and stores `links.latest_pings`, a stable URL
-for the newest pings across granted rooms. The URL contains no credential;
-authenticate with the bearer already saved by the CLI.
+for the newest pings across granted rooms, and `links.install_app`, the
+token-free mobile handoff. `links.latest_pings` contains no credential;
+authenticate requests to it with the bearer saved by the CLI.
 
 **Exit codes carry the human's answer**: 0 success/answered/acked/approved ·
 1 error · 2 bad usage · 3 expired · 4 cancelled/denied/not-ready. Build shell
@@ -114,9 +122,10 @@ pingroom handoff --question -m "Merge strategy?" -o squash:Squash -o rebase:Reba
 
 `approval` is the deploy gate (approve/deny card). `handoff` reaches the
 authorizing human privately — no room sees it (`--target me` is the default;
-`--expires-in 120..86400`, default 900). If
-the recipient's device isn't ready, `pingroom activate` sends the one-tap
-Agent Inbox activation, then retry.
+`--expires-in 120..86400`, default 900). On `recipient_not_ready`, keep the
+connection and do not retry the original command until `pingroom activate`
+reports success after the person answers its test Question. Follow the recovery
+steps under Troubleshooting.
 
 ## Live progress cards
 
@@ -236,6 +245,11 @@ that, or `--dir <path>` to install somewhere else. Requires CLI >= 0.8.0.
   more under Connected Agents in the app.
 - `pro_required` → attachments/webhooks need the account upgraded; say so
   instead of retrying.
+- `recipient_not_ready` → show the server's explanation. Have the human install
+  or update PingRoom at <https://pingroom.io/i>, open it, sign in, and enable
+  notifications. Then run `pingroom activate`. Do not retry the original
+  command until the person answers its test Question and `pingroom activate`
+  reports success; installation alone does not show that the phone is ready.
 - Exit 3 after `--wait` → the human never answered in time. Treat as "no".
 - Config lives in `~/.pingroom/` (`PINGROOM_HOME` overrides); `pingroom config
   list` shows it.
