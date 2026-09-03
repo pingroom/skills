@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pingroom": {
+      "type": "http",
+      "url": "https://api.pingroom.io/api/agent/mcp"
+    }
+  }
+}
