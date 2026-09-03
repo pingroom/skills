@@ -125,8 +125,8 @@ pingroom handoff --question -m "Merge strategy?" -o squash:Squash -o rebase:Reba
 `approval` is the deploy gate (approve/deny card). `handoff` reaches the
 authorizing human privately — no room sees it (`--target me` is the default;
 `--expires-in 120..86400`, default 900). On `recipient_not_ready`, keep the
-connection and do not retry the original command until `pingroom activate`
-reports success after the person answers its test Question. Follow the recovery
+connection and do not retry the original command until activation reports
+success after the person answers its test Question. Follow the recovery
 steps under Troubleshooting.
 
 ## Live progress cards
