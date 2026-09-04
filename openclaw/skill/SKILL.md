@@ -30,7 +30,7 @@ metadata:
             {
               "id": "node",
               "kind": "node",
-              "package": "@pingroom/cli@^0.10.1",
+              "package": "@pingroom/cli@^0.10.2",
               "bins": ["pingroom"],
               "label": "Install @pingroom/cli (npm)",
             },
@@ -44,7 +44,7 @@ metadata:
 `pingroom` is a Node ≥ 20 CLI that turns a step in your work into an event on a
 person's phone — a push they feel, a card on their lock screen, a question they
 answer with one tap — and turns their answer back into an exit code you can
-branch on. Requires `@pingroom/cli` ≥ 0.10.1.
+branch on. Requires `@pingroom/cli` ≥ 0.10.2.
 
 > **This sends data off the machine.** Message text, attachments, links and
 > locations you pass to `pingroom` are transmitted to the PingRoom service and
@@ -278,7 +278,7 @@ pingroom attachment delete <id>
 
 Webhook creation and attachment upload are Pro. `--json` on any command prints
 the raw response for scripting. `actions set-all` with `--set` or `--actions`
-requires CLI ≥ 0.10.1. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
+requires CLI ≥ 0.10.2. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
 prints "unknown command", the installed binary is older than these docs
 (`npm i -g @pingroom/cli` to update, or run from a checkout).
 

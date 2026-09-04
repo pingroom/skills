@@ -1,6 +1,6 @@
 {
   "name": "@pingroom/openclaw-plugin",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "OpenClaw channel plugin for PingRoom: phone pings, tappable Questions, approvals, and handoffs from any OpenClaw agent.",
   "type": "module",
   "license": "MIT",
@@ -39,7 +39,7 @@
     "inspect": "openclaw plugins inspect pingroom --runtime --json"
   },
   "dependencies": {
-    "@pingroom/sdk": "^0.4.6"
+    "@pingroom/sdk": "^0.4.7"
   },
   "peerDependencies": {
     "openclaw": ">=2026.8.2"

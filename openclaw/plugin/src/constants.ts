@@ -2,7 +2,7 @@
 
 export const CHANNEL_ID = "pingroom";
 export const PLUGIN_ID = "pingroom";
-export const PLUGIN_VERSION = "0.1.2";
+export const PLUGIN_VERSION = "0.1.3";
 export const USER_AGENT = `pingroom-openclaw-plugin/${PLUGIN_VERSION}`;
 export const DEFAULT_BASE_URL = "https://api.pingroom.io";
 export const AGENT_LABEL = "OpenClaw";

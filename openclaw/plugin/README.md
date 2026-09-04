@@ -9,12 +9,12 @@ surface — pings carry urgency, `ask_user` questions become tappable
 lock-screen Questions, and exec approvals become approve/deny cards.
 
 - **Guide:** https://pingroom.io/connect-openclaw.md
-- **Requires:** OpenClaw ≥ 2026.8.2, Node ≥ 22.22.3, PingRoom SDK ≥ 0.4.6
+- **Requires:** OpenClaw ≥ 2026.8.2, Node ≥ 22.22.3, PingRoom SDK ≥ 0.4.7
 
 ## Install
 
 ```bash
-openclaw plugins install npm:@pingroom/openclaw-plugin@0.1.2
+openclaw plugins install npm:@pingroom/openclaw-plugin@0.1.3
 openclaw plugins enable pingroom
 ```
 
@@ -161,8 +161,7 @@ openclaw plugins install --link . --force
 openclaw plugins inspect pingroom --runtime --json
 ```
 
-This source tree contains version 0.1.2; npm still serves 0.1.0. Publish SDK
-0.4.6 before publishing this package; publish CLI 0.10.1 before directing users to
-the bundled CLI skill. After SDK publication, run `npm install --package-lock-only`
-to record the published tarball integrity, then `npm run prepublishOnly`. The
-package includes `/pingroom activate`; older plugin 0.1.0 does not.
+Publish and verify the minimum SDK and CLI versions before releasing this
+package: SDK 0.4.7 and CLI 0.10.2. Update the SDK dependency and lockfile from
+the registry, then run `npm run prepublishOnly` and inspect `npm pack` contents.
+Keep `package.json`, `openclaw.plugin.json`, and `PLUGIN_VERSION` aligned.
