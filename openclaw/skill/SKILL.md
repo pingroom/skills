@@ -10,8 +10,11 @@ description: >-
   before deploying", "send this to my phone", "ping the team", or any step that
   needs a real human decision rather than a guess. Pairing works without a
   terminal: `pingroom pair --agent-label "OpenClaw"` creates a separate robot
-  profile and prints its claim link.
-version: 1.0.0
+  profile and prints its claim link. Privacy: everything you pass — message
+  text, attachments, links, and locations — is sent to the PingRoom service and
+  delivered to the paired human's phone, so send only what the user has agreed
+  to share off-platform, and ask first when the request is ambiguous.
+version: 1.0.2
 homepage: https://pingroom.io/connect-openclaw.md
 user-invocable: true
 metadata:
@@ -42,6 +45,14 @@ metadata:
 person's phone — a push they feel, a card on their lock screen, a question they
 answer with one tap — and turns their answer back into an exit code you can
 branch on. Requires `@pingroom/cli` ≥ 0.10.1.
+
+> **This sends data off the machine.** Message text, attachments, links and
+> locations you pass to `pingroom` are transmitted to the PingRoom service and
+> delivered to the paired human's phone, where they persist in that person's
+> Ping history. Trigger phrases like "notify me" or "let me know when it's
+> done" do not by themselves mean the user consented to sending *content*
+> off-platform — send the minimum the task needs, and ask before including a
+> file, a location, or anything the user has not already shared.
 
 ## Connect first (no terminal needed)
 

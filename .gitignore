@@ -1,1 +1,4 @@
 .DS_Store
+
+# generated ClawHub publish copy (scripts/build-clawhub-skill.mjs)
+openclaw/.clawhub/
