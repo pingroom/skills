@@ -24,6 +24,9 @@ export const QUESTION_OPTION_VALUE_MAX = 40;
 /** A PingRoom Question carries 2–4 options. */
 export const QUESTION_MIN_OPTIONS = 2;
 export const QUESTION_MAX_OPTIONS = 4;
+/** Attachment limits accepted by the PingRoom API. */
+export const ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+export const ATTACHMENT_MAX_COUNT = 4;
 
 /** Reserved outbound targets that mean "the room the human pinned at pairing". */
 export const DELIVERY_ROOM_ALIASES = new Set(["me", "default", "owner"]);

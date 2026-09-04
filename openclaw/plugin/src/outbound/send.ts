@@ -3,7 +3,7 @@ import type { ResolvedAccount } from "../config.js";
 import { isProRequired } from "../client.js";
 import { splitForPing } from "./chunk.js";
 import type { PingPlan } from "./render.js";
-import { PING_TITLE_MAX } from "../constants.js";
+import { ATTACHMENT_MAX_COUNT, PING_TITLE_MAX } from "../constants.js";
 import type { QuestionMarker } from "../inbound/questions.js";
 
 export interface SendContext {
@@ -12,6 +12,7 @@ export interface SendContext {
   room: string;
   replyToId?: string | null;
   correlationId?: string;
+  attachmentIds?: string[];
   /** Set when this account has already been told it is not Pro. */
   proUnavailable?: boolean;
   onProUnavailable?: () => void;
@@ -23,6 +24,17 @@ export interface SendResult {
   questionId?: string;
 }
 
+/** Apply the same delivery preferences to text, media, and URL-button Pings. */
+function broadcastMetadata(ctx: SendContext, first = true): Record<string, unknown> {
+  return {
+    ...(ctx.correlationId ? { correlation_id: ctx.correlationId } : {}),
+    ...(first && ctx.account.urgency === "urgent" ? { is_urgent: true } : {}),
+    ...(first && ctx.account.requireAck ? { requires_ack: true } : {}),
+    ...(first && ctx.replyToId ? { reply_to: ctx.replyToId } : {}),
+    ...(first && ctx.attachmentIds?.length ? { attachment_ids: ctx.attachmentIds } : {}),
+  };
+}
+
 /**
  * Send agent text as one or more Pings.
  *
@@ -31,26 +43,22 @@ export interface SendResult {
  * Pro-gated and a silent 402 mid-reply is worse than a visible ellipsis.
  */
 export async function sendText(text: string, ctx: SendContext): Promise<SendResult> {
-  const chunks = splitForPing(text, {
+  const chunks = splitForPing(text.trim() || (ctx.attachmentIds?.length ? "Attachment" : ""), {
     maxChunks: ctx.account.maxChunksPerReply,
   });
   if (chunks.messages.length === 0) return {};
 
-  let attachmentIds: string[] | undefined;
-  if (chunks.truncated && ctx.account.overflow === "attach" && !ctx.proUnavailable) {
-    attachmentIds = await tryAttachFullText(text, ctx);
+  const attachmentIds = [...(ctx.attachmentIds ?? [])];
+  if (chunks.truncated && ctx.account.overflow === "attach" && !ctx.proUnavailable
+    && attachmentIds.length < ATTACHMENT_MAX_COUNT) {
+    attachmentIds.push(...(await tryAttachFullText(text, ctx) ?? []));
   }
 
   let firstId: string | undefined;
   for (const [index, message] of chunks.messages.entries()) {
     const first = index === 0;
-    const ping: Record<string, unknown> = { message };
+    const ping: Record<string, unknown> = { message, ...broadcastMetadata({ ...ctx, attachmentIds }, first) };
     if (first && chunks.title) ping.title = chunks.title.slice(0, PING_TITLE_MAX);
-    if (first && ctx.account.urgency === "urgent") ping.is_urgent = true;
-    if (first && ctx.account.requireAck) ping.requires_ack = true;
-    if (first && attachmentIds?.length) ping.attachment_ids = attachmentIds;
-    if (ctx.correlationId) ping.correlation_id = ctx.correlationId;
-    if (first && ctx.replyToId) ping.reply_to = ctx.replyToId;
     if (chunks.truncated && index === chunks.messages.length - 1) {
       ping.data = { truncated: true, truncated_chars: chunks.originalLength };
     }
@@ -64,11 +72,11 @@ export async function sendText(text: string, ctx: SendContext): Promise<SendResu
 
 async function tryAttachFullText(text: string, ctx: SendContext): Promise<string[] | undefined> {
   try {
-    const uploaded = (await ctx.sdk.attachments.upload({
+    const uploaded = await ctx.sdk.attachments.upload({
       filename: "reply.md",
       content: Buffer.from(text, "utf8"),
-      mime_type: "text/markdown",
-    } as never)) as { id?: string };
+      contentType: "text/markdown",
+    });
     return uploaded?.id ? [uploaded.id] : undefined;
   } catch (error) {
     // Not Pro: remember it so the next reply does not pay the round trip, and
@@ -95,6 +103,7 @@ export async function sendQuestion(
     responder_scope: "direct",
     ...(ctx.correlationId ? { correlation_id: ctx.correlationId } : {}),
     ...(ctx.replyToId ? { reply_to: ctx.replyToId } : {}),
+    ...(ctx.attachmentIds?.length ? { attachment_ids: ctx.attachmentIds } : {}),
     // The mapping back to OpenClaw lives on the Question itself, so a gateway
     // restart can re-adopt open questions without a local store.
     data: { oc: marker },
@@ -113,7 +122,7 @@ export async function sendLink(
   const sent = (await ctx.sdk.broadcast(ctx.room, {
     message: chunks.messages[0] ?? plan.buttonLabel ?? "Open",
     ...(chunks.title ? { title: chunks.title } : {}),
-    ...(ctx.correlationId ? { correlation_id: ctx.correlationId } : {}),
+    ...broadcastMetadata(ctx),
     data: {
       url: plan.url,
       ...(plan.buttonLabel ? { button_label: plan.buttonLabel.slice(0, 26) } : {}),

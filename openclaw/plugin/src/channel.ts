@@ -6,6 +6,7 @@ import { currentAccount, getPingRoomRuntime, isProUnavailable, markProUnavailabl
 import type { QuestionMarker } from "./inbound/questions.js";
 import { planFromPresentation } from "./outbound/render.js";
 import { sendLink, sendQuestion, sendText } from "./outbound/send.js";
+import { uploadMedia, type MediaContext } from "./outbound/media.js";
 import { resolveRoomTarget } from "./outbound/target.js";
 
 /**
@@ -96,6 +97,21 @@ export const pingroomChannelPlugin = createChatChannelPlugin<ResolvedAccount>({
         });
         return { messageId: result.messageId ?? "" };
       },
+      sendMedia: async (params: MediaContext & { to?: string; text: string; accountId?: string | null; replyToId?: string | null }) => {
+        const { account, sdk } = currentAccount(params.accountId);
+        const target = resolveRoomTarget(params.to, account);
+        if (!target.ok) throw new Error(target.error);
+        const send = {
+          sdk, account, room: target.room,
+          ...(params.replyToId ? { replyToId: params.replyToId } : {}),
+          proUnavailable: isProUnavailable(account.accountId),
+          onProUnavailable: () => markProUnavailable(account.accountId),
+        };
+        const attachmentIds = await uploadMedia(params, send);
+        if (attachmentIds.length === 0) throw new Error("A PingRoom media reply requires an attachment.");
+        const result = await sendText(params.text, { ...send, attachmentIds });
+        return { messageId: result.messageId ?? "" };
+      },
     },
     base: {
       deliveryMode: "direct",
@@ -145,12 +161,12 @@ export const pingroomChannelPlugin = createChatChannelPlugin<ResolvedAccount>({
        * it: a Question for a decision, a link ping for a lone URL, plain text
        * for everything else.
        */
-      sendPayload: async (ctx: {
+      sendPayload: async (ctx: MediaContext & {
         to?: string;
         text?: string;
         accountId?: string | null;
         replyToId?: string | null;
-        payload?: { presentation?: unknown };
+        payload?: { presentation?: unknown; text?: string };
       }) => {
         const { account, sdk } = currentAccount(ctx.accountId);
         const target = resolveRoomTarget(ctx.to, account);
@@ -164,7 +180,9 @@ export const pingroomChannelPlugin = createChatChannelPlugin<ResolvedAccount>({
           ...(ctx.replyToId ? { replyToId: ctx.replyToId } : {}),
           proUnavailable: isProUnavailable(account.accountId),
           onProUnavailable: () => markProUnavailable(account.accountId),
+          attachmentIds: [] as string[],
         };
+        const text = ctx.text ?? ctx.payload?.text ?? "";
 
         if (plan.kind === "question" || plan.kind === "approval") {
           const runtime = getPingRoomRuntime();
@@ -174,15 +192,17 @@ export const pingroomChannelPlugin = createChatChannelPlugin<ResolvedAccount>({
           const marker: QuestionMarker = plan.kind === "question"
             ? { plugin: "openclaw", kind: "question", questionId: plan.questionId }
             : { plugin: "openclaw", kind: "approval", approvalId: plan.approvalId, approvalKind: plan.approvalKind };
+          send.attachmentIds = await uploadMedia(ctx, send);
           const result = await sendQuestion(plan, send, runtime.createQuestionMarker(marker, target.room));
           if (result.questionId) runtime.watchQuestion(result.questionId);
           return { channel: CHANNEL_ID, messageId: result.questionId ?? "" };
         }
+        send.attachmentIds = await uploadMedia(ctx, send);
         if (plan.kind === "link") {
-          const result = await sendLink(plan, ctx.text ?? "", send);
+          const result = await sendLink(plan, text, send);
           return { channel: CHANNEL_ID, messageId: result.messageId ?? "" };
         }
-        const result = await sendText(ctx.text ?? "", send);
+        const result = await sendText(text, send);
         return { channel: CHANNEL_ID, messageId: result.messageId ?? "" };
       },
     },

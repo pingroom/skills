@@ -59,6 +59,7 @@ OpenClaw's own `/pair` is DM allowlist pairing and means something else.
 | Sends a supported `ask_user` presentation | A Question card with 2–4 tappable options |
 | Sends an exec/plugin approval presentation | An approve / deny card |
 | Emits a link | A ping with a tappable button |
+| Sends a supported image or file | A ping with an attachment, even without a caption |
 | An allowed room member pings | A message in the agent's session |
 
 Answers use OpenClaw's public channel resolution adapters and the Gateway's
@@ -108,6 +109,12 @@ Everything lives under `channels.pingroom`:
 are chosen for that: only the final reply becomes a ping, at most two chunks.
 Raise `maxChunksPerReply` or set `visibleReplies: "all"` only if the account is
 Pro or you like running out.
+
+**Attachments (Pro).** Replies support up to four files, each at most 5 MiB:
+PNG, JPEG, PDF, Markdown, HTML, plain text, and ZIP. Media uses OpenClaw's
+allowed file roots and remote URL checks. If a supplied attachment cannot be
+read or uploaded, the send fails with an error. Link and attachment pings
+honor the same urgency, acknowledgment, and reply settings as text pings.
 
 **`dmPolicy: "pairing"` is rejected.** OpenClaw's pairing DMs a code to an
 unknown sender; PingRoom cannot DM a non-member, and putting a code in a shared
