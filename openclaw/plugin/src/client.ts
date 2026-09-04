@@ -13,6 +13,9 @@ export function createClient(account: ResolvedAccount): PingRoom {
     token: account.token,
     baseUrl: account.baseUrl,
     userAgent: USER_AGENT,
+    // Enforce this even with an older installed SDK: redirecting a POST can
+    // disclose its body after fetch removes cross-origin Authorization.
+    fetch: (url, init) => fetch(url, { ...init, redirect: "error" }),
   });
 }
 
