@@ -9,6 +9,10 @@ export interface QuestionMarker {
   /** Durable approval id (kind "approval"). */
   approvalId?: string;
   approvalKind?: string;
+  room?: string;
+  sessionKey?: string;
+  agentId?: string;
+  binding?: string;
 }
 
 export interface TrackedQuestion {
@@ -24,6 +28,8 @@ export interface QuestionResolution {
   /** A typed answer, when they used the free-text path instead. */
   text?: string;
   responderId?: string;
+  targetUserId?: string;
+  responderScope?: string;
 }
 
 export function isOpenClawMarker(value: unknown): value is QuestionMarker {
@@ -45,8 +51,10 @@ export function readMarker(data: unknown): QuestionMarker | null {
  */
 export function readResolution(question: {
   state?: string;
-  answer?: { value?: string | null; text?: string | null; responder?: { id?: string } | null } | null;
+  answer?: { value?: string | null; text?: string | null; responder?: { id?: string | null } | null } | null;
   data?: unknown;
+  target_user_id?: string | null;
+  responder_scope?: string;
 }): QuestionResolution | null {
   const marker = readMarker(question?.data);
   if (!marker) return null;
@@ -64,6 +72,8 @@ export function readResolution(question: {
     ...(typeof value === "string" && value !== "" ? { optionValue: value } : {}),
     ...(typeof text === "string" && text !== "" ? { text } : {}),
     ...(question.answer?.responder?.id ? { responderId: question.answer.responder.id } : {}),
+    ...(question.target_user_id ? { targetUserId: question.target_user_id } : {}),
+    ...(question.responder_scope ? { responderScope: question.responder_scope } : {}),
   };
 }
 

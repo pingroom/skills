@@ -349,7 +349,7 @@ function pairingReply(
   expiresIn: string,
   hasQr: boolean,
 ): CommandReply {
-  const pairUrl = pairing.pair_url;
+  const pairUrl = cleanText(pairing.pair_browser_url) ?? pairing.pair_url;
   const installUrl = installAppUrl(pairing);
   const identity = agentIdentity(pairing, fallbackLabel);
   const robot = identity.handle

@@ -12,7 +12,7 @@ description: >-
   phone", "ask me before deploying", "ping the team", "notify me", "send me the
   report", or "show progress on my lock screen" all mean this skill. Also use it
   when writing scripts or CI that must alert a person, and for managing PingRoom
-  rooms, webhooks, or quick actions via the CLI.
+  rooms, webhooks, quick actions, or the connected agent profile.
 ---
 
 # PingRoom: reach a human, get a real answer
@@ -268,13 +268,16 @@ on the code, don't retry blindly:
 | `validation_failed` | Read the message; commonly a public room with no other member, an unsupported room type, or a length cap. |
 | `quota_exceeded` / HTTP 429 | Back off; respect Retry-After. Never hot-loop a wait tool — they long-poll server-side already. |
 
-New MCP connections receive full PingRoom agent access. Room grants and
+New MCP connections receive the single `pingroom:full` consent grant. It
+expands to 17 internal permissions, including permission to edit the robot's
+profile; it does not change the human's account profile. Room grants and
 account-tier limits still apply to every call.
 
 ## CLI companion
 
-The `pingroom` CLI shares the account and adds what MCP doesn't carry — large
-attachments, room/webhook/quick-action management, CI and hook integration.
+The `pingroom` CLI uses its own paired credential and adds large attachments,
+CI, and hook integration. Room, webhook, quick-action, and agent-profile
+management are also available through public MCP.
 When the work is a script, CI job, or a file over ~90 KiB, switch to the
 `pingroom-cli` skill (sibling of this one) instead of forcing it through MCP.
 

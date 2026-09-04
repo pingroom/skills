@@ -51,6 +51,9 @@ export async function verifyAndNormalize(
   } catch {
     return { ok: false, status: 400, reason: "body is not JSON" };
   }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { ok: false, status: 400, reason: "body must be an object" };
+  }
 
   const event = fromWebhook(parsed);
   // An event this plugin does not act on is still a valid delivery: answering

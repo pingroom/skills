@@ -102,9 +102,9 @@ export function planFromPresentation(presentation: Presentation | null | undefin
         if (typeof action.questionId !== "string") return { kind: "text" };
         questionIds.add(action.questionId);
         if (action.intent === "custom-input") { allowText = true; break; }
-        if (typeof action.optionValue !== "string" || !label) return { kind: "text" };
+        if (typeof action.optionValue !== "string" || action.optionValue.length > QUESTION_OPTION_VALUE_MAX || !label) return { kind: "text" };
         options.push({
-          value: clamp(action.optionValue, QUESTION_OPTION_VALUE_MAX)!,
+          value: action.optionValue,
           label: clamp(label, QUESTION_OPTION_LABEL_MAX)!,
           ...styleOf(button?.style),
         });
@@ -170,7 +170,7 @@ export function planFromPresentation(presentation: Presentation | null | undefin
 
 function usable(options: PingPlanOption[]): boolean {
   const values = new Set(options.map((o) => o.value));
-  return options.length >= QUESTION_MIN_OPTIONS && values.size === options.length;
+  return options.length >= QUESTION_MIN_OPTIONS && options.length <= QUESTION_MAX_OPTIONS && values.size === options.length;
 }
 
 function styleOf(style: unknown, fallback?: "danger"): { style?: "primary" | "danger" } {

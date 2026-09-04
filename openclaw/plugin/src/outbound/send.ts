@@ -4,6 +4,7 @@ import { isProRequired } from "../client.js";
 import { splitForPing } from "./chunk.js";
 import type { PingPlan } from "./render.js";
 import { PING_TITLE_MAX } from "../constants.js";
+import type { QuestionMarker } from "../inbound/questions.js";
 
 export interface SendContext {
   sdk: PingRoom;
@@ -81,16 +82,17 @@ async function tryAttachFullText(text: string, ctx: SendContext): Promise<string
 export async function sendQuestion(
   plan: Extract<PingPlan, { kind: "question" | "approval" }>,
   ctx: SendContext,
-  marker: Record<string, unknown>,
+  marker: QuestionMarker,
 ): Promise<SendResult> {
   const created = (await ctx.sdk.questions.ask(ctx.room, {
     prompt: plan.prompt,
     options: plan.options,
     ...(plan.context ? { context: plan.context } : {}),
-    ...(plan.kind === "question" && plan.allowText
+    ...(plan.kind === "question" && plan.allowText && marker.sessionKey
       ? { text_input: { placeholder: "Type an answer" } }
       : {}),
     ttl: ctx.account.questionTtlSeconds,
+    responder_scope: "direct",
     ...(ctx.correlationId ? { correlation_id: ctx.correlationId } : {}),
     ...(ctx.replyToId ? { reply_to: ctx.replyToId } : {}),
     // The mapping back to OpenClaw lives on the Question itself, so a gateway

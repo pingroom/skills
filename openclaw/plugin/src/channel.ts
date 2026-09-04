@@ -2,7 +2,8 @@ import { createChannelPluginBase, createChatChannelPlugin } from "openclaw/plugi
 import type { OpenClawConfig } from "openclaw/plugin-sdk/channel-core";
 import { CHANNEL_ID, PING_MESSAGE_MAX, QUESTION_MAX_OPTIONS, QUESTION_OPTION_LABEL_MAX, QUESTION_OPTION_VALUE_MAX } from "./constants.js";
 import { inspectAccount, resolveAccount, type ResolvedAccount } from "./config.js";
-import { currentAccount, isProUnavailable, markProUnavailable } from "./runtime.js";
+import { currentAccount, getPingRoomRuntime, isProUnavailable, markProUnavailable } from "./runtime.js";
+import type { QuestionMarker } from "./inbound/questions.js";
 import { planFromPresentation } from "./outbound/render.js";
 import { sendLink, sendQuestion, sendText } from "./outbound/send.js";
 import { resolveRoomTarget } from "./outbound/target.js";
@@ -41,6 +42,7 @@ export const pingroomChannelPlugin = createChatChannelPlugin<ResolvedAccount>({
     },
     config: {
       listAccountIds: () => ["default"],
+      defaultAccountId: () => "default",
       resolveAccount: (cfg: OpenClawConfig, accountId?: string | null) =>
         resolveAccount(cfg, accountId),
       inspectAccount: (cfg: OpenClawConfig) => inspectAccount(cfg),
@@ -165,10 +167,15 @@ export const pingroomChannelPlugin = createChatChannelPlugin<ResolvedAccount>({
         };
 
         if (plan.kind === "question" || plan.kind === "approval") {
-          const marker = plan.kind === "question"
+          const runtime = getPingRoomRuntime();
+          if (!runtime.createQuestionMarker || !runtime.watchQuestion) {
+            throw new Error("PingRoom inbound service is not running; cannot deliver an interactive question");
+          }
+          const marker: QuestionMarker = plan.kind === "question"
             ? { plugin: "openclaw", kind: "question", questionId: plan.questionId }
             : { plugin: "openclaw", kind: "approval", approvalId: plan.approvalId, approvalKind: plan.approvalKind };
-          const result = await sendQuestion(plan, send, marker);
+          const result = await sendQuestion(plan, send, runtime.createQuestionMarker(marker, target.room));
+          if (result.questionId) runtime.watchQuestion(result.questionId);
           return { channel: CHANNEL_ID, messageId: result.questionId ?? "" };
         }
         if (plan.kind === "link") {
@@ -181,3 +188,15 @@ export const pingroomChannelPlugin = createChatChannelPlugin<ResolvedAccount>({
     },
   },
 } as never);
+
+// The composition helper only copies security/threading/outbound. Install the
+// approval capability on the resulting public channel object.
+pingroomChannelPlugin.approvalCapability = {
+  authorizeActorAction: ({ accountId, senderId }) => {
+    try {
+      return { authorized: Boolean(senderId && getPingRoomRuntime().isApprovalActor?.(accountId ?? "default", senderId)) };
+    } catch {
+      return { authorized: false };
+    }
+  },
+};

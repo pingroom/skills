@@ -87,11 +87,19 @@ test("no presentation at all is plain text", () => {
   assert.equal(planFromPresentation({}).kind, "text");
 });
 
-test("labels and values are clamped to what PingRoom accepts", () => {
+test("labels are clamped without changing the submitted option value", () => {
   const plan = planFromPresentation(buttons(
-    { label: "L".repeat(80), action: { type: "question", questionId: "q", optionValue: "v".repeat(80) } },
+    { label: "L".repeat(80), action: { type: "question", questionId: "q", optionValue: "unchanged" } },
     { label: "Second", action: { type: "question", questionId: "q", optionValue: "second" } },
   ));
   assert.ok(plan.options[0].label.length <= 40);
-  assert.ok(plan.options[0].value.length <= 40);
+  assert.equal(plan.options[0].value, "unchanged");
+});
+
+
+test("unrepresentable option values fall back without altering the answer", () => {
+  assert.equal(planFromPresentation(buttons(
+    { label: "Long", action: { type: "question", questionId: "q", optionValue: "v".repeat(80) } },
+    { label: "No", action: { type: "question", questionId: "q", optionValue: "no" } },
+  )).kind, "text");
 });

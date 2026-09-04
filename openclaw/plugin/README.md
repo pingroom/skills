@@ -9,12 +9,12 @@ surface — pings carry urgency, `ask_user` questions become tappable
 lock-screen Questions, and exec approvals become approve/deny cards.
 
 - **Guide:** https://pingroom.io/connect-openclaw.md
-- **Requires:** OpenClaw ≥ 2026.8.2, Node ≥ 22.22.3
+- **Requires:** OpenClaw ≥ 2026.8.2, Node ≥ 22.22.3, PingRoom SDK ≥ 0.4.6
 
 ## Install
 
 ```bash
-openclaw plugins install npm:@pingroom/openclaw-plugin
+openclaw plugins install npm:@pingroom/openclaw-plugin@0.1.2
 openclaw plugins enable pingroom
 ```
 
@@ -56,12 +56,23 @@ OpenClaw's own `/pair` is DM allowlist pairing and means something else.
 | The agent does | Your phone gets |
 |---|---|
 | Sends a final reply | A ping (≤120 chars, chunked) |
-| Calls `ask_user` | A Question card with 2–4 tappable options |
-| Requests an exec approval | An approve / deny card |
+| Sends a supported `ask_user` presentation | A Question card with 2–4 tappable options |
+| Sends an exec/plugin approval presentation | An approve / deny card |
 | Emits a link | A ping with a tappable button |
-| Someone pings the room | A message in the agent's session |
+| An allowed room member pings | A message in the agent's session |
 
-Answers come back through the Gateway, so the agent continues where it paused.
+Answers use OpenClaw's public channel resolution adapters and the Gateway's
+authorization checks. Only the paired human's verified answer can
+resolve a Question or approval. Typed answers return to the original session
+when the host supplied it with the outgoing payload. Expiry and cancellation
+do not count as approval; the Gateway handles those terminal states.
+
+The gateway service starts long-polling and resumes handling pending Questions
+on startup. Question metadata is signed for this gateway and credential, so
+another installation or a modified session id cannot resume a local task.
+Keep the gateway state directory when upgrading. Questions created by older
+plugin versions have no such binding; answer those in the original OpenClaw
+chat, or ask a fresh Question after upgrading.
 
 ## Configuration
 
@@ -102,9 +113,17 @@ Pro or you like running out.
 unknown sender; PingRoom cannot DM a non-member, and putting a code in a shared
 room shows it to everyone. Use `allowlist`.
 
+An empty `allowFrom` list blocks ordinary incoming room pings. Add the
+PingRoom user ids allowed to talk to the agent, or explicitly choose `open`.
+Questions still accept the paired human's answer. The poll feed excludes the
+bound human's own ordinary sends and machine-generated traffic.
+
 **Webhooks (optional, Pro).** With `webhook.enabled` the plugin registers a
-gateway route and verifies PingRoom's HMAC-v2 signature, so answers arrive
-immediately instead of on the next poll. Polling keeps running either way.
+gateway route at `/pingroom/events` (override with `webhook.path`). Set
+`webhook.secret` to the outgoing webhook's signing secret and configure that
+webhook in PingRoom to deliver to the gateway URL. The route verifies HMAC-v2
+(or legacy HMAC-v1), then reads the authoritative record before dispatching.
+Polling keeps running either way. The gateway must be reachable by PingRoom.
 
 ## Running the CLI from the agent
 
@@ -113,6 +132,9 @@ The plugin bundles the `pingroom` skill and contributes `PINGROOM_HOME` to
 environment. Set `execEnv.injectToken` only if your agent runs sandboxed and
 cannot read the gateway's filesystem — hook-contributed env appears in Gateway
 approval and audit metadata.
+The credential file belongs to the plugin's gateway state directory, has mode
+0600, and is removed when the service stops. Install CLI 0.10.1 or later
+separately to use the bundled skill's commands.
 
 If a private handoff or activation reports `recipient_not_ready`, keep the
 connection and show the server's explanation. Ask the person to install or update
@@ -131,3 +153,9 @@ npm test                                    # builds, then runs the suite
 openclaw plugins install --link . --force
 openclaw plugins inspect pingroom --runtime --json
 ```
+
+This source tree contains version 0.1.2; npm still serves 0.1.0. Publish SDK
+0.4.6 before publishing this package; publish CLI 0.10.1 before directing users to
+the bundled CLI skill. After SDK publication, run `npm install --package-lock-only`
+to record the published tarball integrity, then `npm run prepublishOnly`. The
+package includes `/pingroom activate`; older plugin 0.1.0 does not.

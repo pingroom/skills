@@ -39,7 +39,7 @@
     "inspect": "openclaw plugins inspect pingroom --runtime --json"
   },
   "dependencies": {
-    "@pingroom/sdk": "^0.4.5"
+    "@pingroom/sdk": "^0.4.6"
   },
   "peerDependencies": {
     "openclaw": ">=2026.8.2"

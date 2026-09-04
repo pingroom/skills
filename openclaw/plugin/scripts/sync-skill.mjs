@@ -1,6 +1,6 @@
 // The plugin ships the OpenClaw skill so installing one teaches the agent the
 // other. The skill has exactly one home — ../skill — and this copies it in at
-// build time; test/skill-sync.test.mjs asserts the copy is byte-identical.
+// build time; test/manifest.test.mjs asserts the copy is byte-identical.
 import { cpSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

@@ -1,6 +1,7 @@
 import type { PingRoom } from "@pingroom/sdk";
 import { createClient } from "./client.js";
 import { resolveAccount, type ResolvedAccount } from "./config.js";
+import type { QuestionMarker } from "./inbound/questions.js";
 
 /**
  * The live runtime for the channel object.
@@ -17,6 +18,9 @@ export interface PingRoomRuntime {
   logger?: { info: (m: string) => void; warn: (m: string) => void; error: (m: string) => void };
   /** Overridable for tests. */
   createClientFor?: (account: ResolvedAccount) => PingRoom;
+  createQuestionMarker?: (marker: QuestionMarker, room: string) => QuestionMarker;
+  watchQuestion?: (questionId: string) => void;
+  isApprovalActor?: (accountId: string, senderId: string) => boolean;
 }
 
 let runtime: PingRoomRuntime | null = null;

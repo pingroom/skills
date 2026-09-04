@@ -528,6 +528,15 @@ test("connect renders pair_url for servers that predate pair_qr_url", async () =
   assert.deepEqual(rendered, [PAIR_URL]);
 });
 
+test("connect keeps the universal-link QR separate from the browser approval URL", async () => {
+  const browserUrl = "https://api.pingroom.io/pair?token=pair_123";
+  const { deps, rendered } = commandHarness({ pairing: { pair_url: PAIR_QR_URL, pair_browser_url: browserUrl } });
+  const reply = await runCommand(ownerContext({ args: "connect", channel: "discord",
+    sessionKey: "agent:main:discord:direct:owner", config: {} }), deps);
+  assert.deepEqual(rendered, [PAIR_QR_URL]);
+  assert.equal(reply.presentation.blocks[1].buttons[0].action.url, browserUrl);
+});
+
 test("connect keeps its claim link when QR rendering fails", async () => {
   const { deps, errors } = commandHarness({
     deps: {

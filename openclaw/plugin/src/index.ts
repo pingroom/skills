@@ -6,6 +6,7 @@ import { runCommand } from "./commands.js";
 import type { PendingPairing } from "./commands.js";
 import { inspectAccount } from "./config.js";
 import { currentAccount, setPingRoomRuntime } from "./runtime.js";
+import { registerPingRoomGateway } from "./gateway.js";
 
 /**
  * Plugin entry.
@@ -35,9 +36,13 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
     const mutationTails = new Map<string, Promise<void>>();
     const ownedClients = new Map<string, import("@pingroom/sdk").PingRoom>();
 
+    const gateway = registerPingRoomGateway(api);
     setPingRoomRuntime({
-      getConfig: () => api.config,
+      getConfig: () => api.runtime.config.current?.() ?? api.config,
       logger: api.logger,
+      createQuestionMarker: gateway.createQuestionMarker,
+      watchQuestion: gateway.watchQuestion,
+      isApprovalActor: gateway.isApprovalActor,
     });
 
     api.registerCommand({
@@ -104,14 +109,14 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
             ownedClients,
             connectedClient: () => currentAccount().sdk,
             saveCredential: async (credential) => {
-              // Persisting into channels.pingroom is the host's job; without a
-              // config-mutation seam we can only report it, never write it.
+              // Persist through the host so its config reload policy applies.
               api.logger.info(
                 credential.token
                   ? `PingRoom paired as @${credential.handle ?? "agent"}; storing the credential`
                   : "PingRoom credential cleared",
               );
-              await api.runtime?.config?.mutateConfigFile?.({
+              await api.runtime.config.mutateConfigFile({
+                afterWrite: { mode: "auto" },
                 mutate: (draft: Record<string, unknown>) => {
                   const channels = (draft.channels ??= {}) as Record<string, Record<string, unknown>>;
                   const section = (channels[CHANNEL_ID] ??= {});
@@ -131,6 +136,7 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
                   return draft;
                 },
               } as never);
+              await gateway.restart();
             },
             notify: async (text, sessionKey) => {
               // A system event rather than a chat message: the pairing result is

@@ -27,7 +27,7 @@ metadata:
             {
               "id": "node",
               "kind": "node",
-              "package": "@pingroom/cli",
+              "package": "@pingroom/cli@^0.10.1",
               "bins": ["pingroom"],
               "label": "Install @pingroom/cli (npm)",
             },
@@ -266,7 +266,8 @@ pingroom attachment delete <id>
 ```
 
 Webhook creation and attachment upload are Pro. `--json` on any command prints
-the raw response for scripting. The management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
+the raw response for scripting. `actions set-all` with `--set` or `--actions`
+requires CLI ≥ 0.10.1. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
 prints "unknown command", the installed binary is older than these docs
 (`npm i -g @pingroom/cli` to update, or run from a checkout).
 
@@ -299,10 +300,12 @@ not need a shorter TTL. Two rules:
   the labeled pairing command once to replace it with a full-access credential.
 - `409 recipient_not_ready` — preserve the connection and relay the server's
   message. Have the human install or update <https://pingroom.io/i>, open it,
-  sign in, and enable notifications. Then run `/pingroom activate`, which uses
-  the plugin's own credential; retry the original operation only after the
-  person answers its test Question and activation reports success. Installation
-  alone does not show that the phone is ready.
+  sign in, and enable notifications. Run `pingroom activate` using the same CLI
+  credential as the failed operation. Retry only after the person answers its
+  test Question and activation reports success. If the operation came from the
+  optional channel plugin (≥ 0.1.2), use `/pingroom activate` in chat instead;
+  that command uses the plugin credential. Installing the app alone does not
+  show that the phone is ready.
 - `402 pro_required` — attachments and webhook management need a Pro account.
 - `pingroom logout` only clears the local file; the server-side credential stays
   live. Revoke it under Connected Agents, or let the labeled pairing command do it.

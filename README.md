@@ -9,7 +9,7 @@ handoffs, and lock-screen live progress. Two are plugins and install in both
 
 | Skill | Use it for |
 |---|---|
-| [`pingroom-mcp`](mcp/skills/pingroom-mcp/SKILL.md) | The hosted MCP connector (`https://api.pingroom.io/api/agent/mcp`) — conversational agents: retain a latest-pings feed URL; send pings with locations, links, structured data, and small attachments; ask questions; gate on approvals; hand decisions to your human; drive live-progress cards. Includes a full 39-tool reference generated from the live `tools/list`. |
+| [`pingroom-mcp`](mcp/skills/pingroom-mcp/SKILL.md) | The hosted MCP connector (`https://api.pingroom.io/api/agent/mcp`) — conversational agents: retain a latest-pings feed URL; send pings with locations, links, structured data, and small attachments; ask questions; gate on approvals; hand decisions to your human; drive live-progress cards. Includes a full 40-tool reference generated from the live `tools/list`. |
 | [`pingroom-cli`](cli/skills/pingroom-cli/SKILL.md) | The [`@pingroom/cli`](https://www.npmjs.com/package/@pingroom/cli) — shells, CI, and Claude Code hooks: attachments up to 5 MiB, exit-code gates on human answers, room/webhook/quick-action management. |
 | [`pingroom`](openclaw/skill/SKILL.md) (OpenClaw) | The same CLI, packaged for [OpenClaw](https://docs.openclaw.ai) agents: headless pairing with `pingroom pair`, `skills.entries` credential wiring, and the sandbox caveat. Not a Claude Code plugin — see [Install for OpenClaw](#for-openclaw). |
 
@@ -98,7 +98,7 @@ The channel plugin beside it publishes to npm as
 [`@pingroom/openclaw-plugin`](https://www.npmjs.com/package/@pingroom/openclaw-plugin):
 
 ```bash
-openclaw plugins install npm:@pingroom/openclaw-plugin
+openclaw plugins install npm:@pingroom/openclaw-plugin@0.1.2
 ```
 
 Have the person install or open PingRoom and sign in before pairing:
@@ -143,9 +143,11 @@ claude mcp add --transport http pingroom https://api.pingroom.io/api/agent/mcp
 ```
 
 The `pingroom-cli` skill needs a paired CLI: `npm i -g @pingroom/cli && pingroom`.
-New connections receive full agent access. If a legacy credential reports
-`insufficient_scope`, run `pingroom reconnect` once to replace it with a
-full-access credential.
+The public MCP catalog contains 40 tools. New connections receive the single
+`pingroom:full` consent grant, which expands to the server's 17 internal
+permissions, including changes to the robot's profile. If a legacy credential
+reports `insufficient_scope`, run `pingroom reconnect` once to replace it with
+a full-access credential.
 
 ## Layout
 
