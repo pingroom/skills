@@ -20,11 +20,12 @@ that URL.
 
   (no arguments)
 
-## redeem_code  [–]
+## redeem_code  [D]
 
 Redeem a gift or promotional code for the human who authorized this agent.
 No room or existing Pro plan is required. Requires `pingroom:codes:redeem`,
-included in `pingroom:full`; limited to 10 attempts per minute.
+included in `pingroom:full`; limited to 10 attempts per minute per linked
+human across app, API and MCP. This consumes the code and is not idempotent.
 
   - `code` (string) **(required)**. Exactly 12 ASCII letters or digits after trimming; letter case is normalized.
 
