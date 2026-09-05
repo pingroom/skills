@@ -56,6 +56,26 @@ Either way the plugins install under their manifest names, `pingroom-mcp` and
 expect. Grok resolves the MCP server from `mcp/.mcp.json`; authenticate once
 with `/mcps`.
 
+### For Cursor
+
+The `pingroom-mcp` plugin includes a Cursor manifest and uses the same skill
+and hosted MCP configuration as the Claude Code and Grok versions. To load it
+locally from a clone:
+
+```bash
+git clone https://github.com/pingroom/skills.git
+mkdir -p ~/.cursor/plugins/local
+ln -s "$(pwd)/skills/mcp" ~/.cursor/plugins/local/pingroom-mcp
+```
+
+Reload Cursor, open **Customize**, and authenticate PingRoom in the browser.
+The person authorizing the connection chooses the account and allowed rooms.
+Local plugin imports must be enabled by your team if they are restricted.
+
+The repository's `.cursor-plugin/marketplace.json` exposes the same plugin for
+Cursor's repository import. Marketplace availability depends on review; the
+manifest alone does not publish a listing. [Cursor plugin documentation](https://cursor.com/docs/plugins).
+
 ### With the PingRoom CLI
 
 ```bash
@@ -174,8 +194,10 @@ manifest, so there is no second Grok-specific copy to keep in lockstep:
 
 ```
 .claude-plugin/marketplace.json   both plugins, for /plugin marketplace add
+.cursor-plugin/marketplace.json   hosted MCP plugin, for Cursor repository import
 mcp/
   .claude-plugin/plugin.json     also declares the hosted MCP server
+  .cursor-plugin/plugin.json     points to the same skill and MCP configuration
   .mcp.json                      the same server, where Grok Build looks
   skills/pingroom-mcp/SKILL.md
   skills/pingroom-mcp/references/tools.md

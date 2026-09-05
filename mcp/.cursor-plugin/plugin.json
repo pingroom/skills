@@ -1,0 +1,22 @@
+{
+  "name": "pingroom-mcp",
+  "description": "Reach a human through PingRoom: send phone notifications, ask questions, request approvals, hand off work, and share live progress over the hosted MCP connector.",
+  "version": "1.1.1",
+  "author": {
+    "name": "PingRoom"
+  },
+  "homepage": "https://pingroom.io/connect-mcp.md",
+  "repository": "https://github.com/pingroom/skills",
+  "license": "MIT",
+  "keywords": [
+    "pingroom",
+    "mcp",
+    "notifications",
+    "human-in-the-loop",
+    "questions",
+    "approvals",
+    "handoffs"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}

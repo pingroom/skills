@@ -1,0 +1,16 @@
+{
+  "name": "pingroom",
+  "owner": {
+    "name": "PingRoom"
+  },
+  "metadata": {
+    "description": "Reach a human through PingRoom with phone notifications, questions, approvals, handoffs, and live progress."
+  },
+  "plugins": [
+    {
+      "name": "pingroom-mcp",
+      "source": "mcp",
+      "category": "productivity"
+    }
+  ]
+}
