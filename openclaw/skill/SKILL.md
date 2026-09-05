@@ -14,7 +14,8 @@ description: >-
   text, attachments, links, and locations — is sent to the PingRoom service and
   delivered to the paired human's phone, so send only what the user has agreed
   to share off-platform, and ask first when the request is ambiguous.
-version: 1.0.2
+  Also use it when the human asks to redeem a PingRoom gift or promotional code.
+version: 1.0.3
 homepage: https://pingroom.io/connect-openclaw.md
 user-invocable: true
 metadata:
@@ -30,7 +31,7 @@ metadata:
             {
               "id": "node",
               "kind": "node",
-              "package": "@pingroom/cli@^0.10.2",
+              "package": "@pingroom/cli@^0.10.3",
               "bins": ["pingroom"],
               "label": "Install @pingroom/cli (npm)",
             },
@@ -44,7 +45,7 @@ metadata:
 `pingroom` is a Node ≥ 20 CLI that turns a step in your work into an event on a
 person's phone — a push they feel, a card on their lock screen, a question they
 answer with one tap — and turns their answer back into an exit code you can
-branch on. Requires `@pingroom/cli` ≥ 0.10.2.
+branch on. Requires `@pingroom/cli` ≥ 0.10.3.
 
 > **This sends data off the machine.** Message text, attachments, links and
 > locations you pass to `pingroom` are transmitted to the PingRoom service and
@@ -53,6 +54,17 @@ branch on. Requires `@pingroom/cli` ≥ 0.10.2.
 > done" do not by themselves mean the user consented to sending *content*
 > off-platform — send the minimum the task needs, and ask before including a
 > file, a location, or anything the user has not already shared.
+
+## Native plugin redemption
+
+With `@pingroom/openclaw-plugin` ≥ 0.1.4, use `pingroom_redeem_code { code }`
+when the owner asks to redeem a gift or promotional code. They can also run
+`/pingroom redeem AB12CD34EF56`. Both use the native plugin's connected
+credential and work without the CLI. These operations are available to the
+owner in WebChat or a direct-message session. The Pro benefit goes to the
+human who authorized that connection; keep the code out of room messages.
+If the native tool is unavailable, the CLI command below is the fallback for
+a paired CLI or the plugin's managed `PINGROOM_HOME` credential.
 
 ## Connect first (no terminal needed)
 
@@ -150,6 +162,25 @@ than a prompt everyone passes.
 <!-- shared-body:start — verbatim copy of the same region in
      skills/cli/skills/pingroom-cli/SKILL.md. Edit there, then re-copy; the two
      are compared by knowledge/tools/audit-knowledge.mjs. -->
+
+## Redeem a gift or promotional code
+
+```bash
+pingroom redeem AB12CD34EF56
+pingroom redeem --code AB12CD34EF56 --json
+```
+
+Requires CLI ≥ 0.10.3. Redemption applies Pro to the human who authorized the
+current connection; no room or existing Pro plan is required. Use the code
+only when that person asks to redeem it. Codes contain 12 letters or digits;
+surrounding whitespace and case are normalized. `PINGROOM_REDEEM_CODE` can
+supply it when neither a positional code nor `--code` is passed, keeping it
+out of command history. Keep codes out of room pings and logs.
+
+Success returns the reward kind, days or package, lifetime flag, and Pro expiry.
+Invalid, expired, or previously used codes fail. On `insufficient_scope`,
+reconnect the credential to authorize code redemption; `pingroom:full` includes
+`pingroom:codes:redeem`. Do not retry a rejected code in a loop.
 
 ## Sending pings
 

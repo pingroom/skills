@@ -36,7 +36,7 @@ async function host({ enabled = true, dmPolicy = "allowlist", inbound = true } =
   const cfg = { channels: { pingroom: { enabled, token: "test-paired-token", useCliCredential: false,
     defaultRoom: "room12", allowFrom: ["friend"], dmPolicy,
     inbound: { enabled: inbound }, webhook: { enabled: true, secret: "test-webhook-secret" } } } };
-  const registrations = { channels: [], services: [], routes: [], hooks: new Map(), commands: [] };
+  const registrations = { channels: [], services: [], routes: [], hooks: new Map(), commands: [], tools: [] };
   const calls = { http: [], questions: [], approvals: [], turns: [], logs: [] };
   const questions = new Map();
   const held = new Map();
@@ -49,6 +49,10 @@ async function host({ enabled = true, dmPolicy = "allowlist", inbound = true } =
     calls.http.push({ path, options });
     const respond = (body) => new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
     if (path === "/api/agent/questions") return respond({ questions: [...questions.values()].filter((q) => q.state === "pending") });
+    if (path === "/api/agent/redeem-code") return respond({
+      message: "Gift redeemed.", kind: "gift", reward_days: 30, package: "monthly",
+      lifetime: false, plan: "pro", plan_expires_at: "2026-10-05T00:00:00Z",
+    });
     if (path === "/api/agent/notifications/wait") return new Promise((resolve, reject) => {
       notifyPoll = (notifications) => resolve(respond({ notifications, cursor: "head-1" }));
       options.signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
@@ -79,6 +83,7 @@ async function host({ enabled = true, dmPolicy = "allowlist", inbound = true } =
     logger: Object.fromEntries(["info", "warn", "error", "debug"].map((level) => [level, (message) => calls.logs.push(message)])),
     registerChannel: ({ plugin }) => registrations.channels.push(plugin),
     registerCommand: (command) => registrations.commands.push(command),
+    registerTool: (factory, options) => registrations.tools.push({ factory, options }),
     registerService: (service) => registrations.services.push(service),
     registerHttpRoute: (route) => registrations.routes.push(route),
     on: (event, handler) => registrations.hooks.set(event, handler),
@@ -223,5 +228,27 @@ test("a disabled account starts no network tasks and exposes no exec credentials
     assert.equal(h.calls.http.length, 0);
     assert.deepEqual(h.registrations.hooks.get("resolve_exec_env")({}, {}), {});
     assert.throws(() => getPingRoomRuntime().createQuestionMarker({ plugin: "openclaw", kind: "question", questionId }, "room12"), /not running/);
+  } finally { await h.close(); }
+});
+
+test("the registered native redemption tool uses the gateway credential and trusted owner context", async () => {
+  const h = await host({ inbound: false });
+  try {
+    const registration = h.registrations.tools.find(({ options }) => options.name === "pingroom_redeem_code");
+    assert.ok(registration);
+    assert.equal(registration.factory({ messageChannel: "webchat" }), null);
+    assert.equal(registration.factory({ senderIsOwner: true, messageChannel: "telegram", sessionKey: "agent:main:telegram:group:1" }), null);
+    const tool = registration.factory({ senderIsOwner: true, messageChannel: "webchat" });
+    const result = await tool.execute("call-1", { code: "ab12cd34ef56" });
+    assert.equal(result.details.plan, "pro");
+    const sent = h.calls.http.filter(({ path }) => path === "/api/agent/redeem-code");
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].options.headers.Authorization, "Bearer test-paired-token");
+    assert.deepEqual(JSON.parse(sent[0].options.body), { code: "AB12CD34EF56" });
+    assert.doesNotMatch(h.calls.logs.join("\n"), /ab12cd34ef56/i);
+    h.cfg.channels.pingroom.enabled = false;
+    const disabled = await tool.execute("call-2", { code: "AB12CD34EF56" });
+    assert.equal(disabled.isError, true);
+    assert.equal(h.calls.http.filter(({ path }) => path === "/api/agent/redeem-code").length, 1);
   } finally { await h.close(); }
 });

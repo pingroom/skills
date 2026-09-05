@@ -2,11 +2,12 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk/channel-core";
 import { pingroomChannelPlugin } from "./channel.js";
 import { CHANNEL_ID, INSTALL_APP_URL, PLUGIN_ID } from "./constants.js";
-import { runCommand } from "./commands.js";
+import { isProvenPrivateSurface, runCommand } from "./commands.js";
 import type { PendingPairing } from "./commands.js";
 import { inspectAccount } from "./config.js";
 import { currentAccount, setPingRoomRuntime } from "./runtime.js";
 import { registerPingRoomGateway } from "./gateway.js";
+import { createRedeemCodeTool } from "./redeem.js";
 
 /**
  * Plugin entry.
@@ -45,9 +46,39 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
       isApprovalActor: gateway.isApprovalActor,
     });
 
+    api.registerTool((ctx) => {
+      let conversationKind: "direct" | "group" | "channel" | undefined;
+      if (ctx.sessionKey) {
+        try {
+          const session = api.runtime?.agent?.session?.getSessionEntry?.({
+            sessionKey: ctx.sessionKey,
+            ...(ctx.agentId ? { agentId: ctx.agentId } : {}),
+            readConsistency: "latest",
+          });
+          if (session?.chatType === "direct" || session?.chatType === "group" || session?.chatType === "channel") {
+            conversationKind = session.chatType;
+          }
+        } catch { /* Unclassified sessions use the conservative session-key fallback. */ }
+      }
+      return createRedeemCodeTool({
+        ...(ctx.senderIsOwner !== undefined ? { senderIsOwner: ctx.senderIsOwner } : {}),
+        isPrivate: isProvenPrivateSurface({
+          ...(ctx.messageChannel ? { channel: ctx.messageChannel } : {}),
+          ...(ctx.sessionKey ? { sessionKey: ctx.sessionKey } : {}),
+          ...(conversationKind ? { conversationKind } : {}),
+        }),
+      }, {
+        connectedClient: () => currentAccount().sdk,
+        isConnected: () => {
+          const snapshot = inspectAccount(api.runtime.config.current?.() ?? api.config);
+          return snapshot.enabled && snapshot.configured;
+        },
+      }) as never;
+    }, { name: "pingroom_redeem_code" });
+
     api.registerCommand({
       name: "pingroom",
-      description: "Connect PingRoom, check the connection, list rooms, or disconnect.",
+      description: "Connect PingRoom, check the connection, list rooms, redeem a code, or disconnect.",
       acceptsArgs: true,
       requireAuth: true,
       // External plugins receive senderIsOwner only when they declare a
@@ -64,7 +95,9 @@ const entry: { id: string; name: string; description: string } = defineChannelPl
             + "its rooms. If a pairing is already pending, run /pingroom connect to reuse that robot and claim link "
             + "before it expires; do not start another pairing. On recipient_not_ready, keep the "
             + "connection, relay the server's message, have them install or update the app, open it, sign in, and "
-            + "enable notifications; then run /pingroom activate before retrying.",
+            + "enable notifications; then run /pingroom activate before retrying. "
+            + "When the owner asks to redeem a gift or promotional code, use pingroom_redeem_code "
+            + "or /pingroom redeem CODE in a private session. It uses this plugin's connection and needs no CLI.",
         } as never,
       ],
       handler: async (ctx: {

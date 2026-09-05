@@ -1,7 +1,7 @@
 # PingRoom MCP — complete tool reference
 
 Generated from the live `tools/list` of https://api.pingroom.io/api/agent/mcp
-(40 tools). Regenerate by POSTing `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
+(41 tools). Regenerate by POSTing `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
 to that endpoint. Every tool call is `tools/call`; in Claude Code the tools
 surface as `mcp__pingroom__<name>` when the server was added directly, or as
 `mcp__plugin_pingroom_mcp_pingroom__<name>` when it came from the PingRoom
@@ -19,6 +19,20 @@ requires the saved MCP bearer token in the `Authorization` header.
 that URL.
 
   (no arguments)
+
+## redeem_code  [–]
+
+Redeem a gift or promotional code for the human who authorized this agent.
+No room or existing Pro plan is required. Requires `pingroom:codes:redeem`,
+included in `pingroom:full`; limited to 10 attempts per minute.
+
+  - `code` (string) **(required)**. Exactly 12 ASCII letters or digits after trimming; letter case is normalized.
+
+Returns `message`, `kind` (`gift` or `redeem`), `reward_days` (integer or null),
+`package` (string or null), `lifetime` (boolean), `plan` (`pro`), and
+`plan_expires_at` (ISO timestamp or null for lifetime). Invalid, expired, or
+used codes return a validation error. Account restrictions and rate limits
+also apply. Keep the one-use code out of room messages and logs.
 
 ## list_rooms  [RI]
 

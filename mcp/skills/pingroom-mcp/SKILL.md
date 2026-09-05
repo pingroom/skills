@@ -12,7 +12,8 @@ description: >-
   phone", "ask me before deploying", "ping the team", "notify me", "send me the
   report", or "show progress on my lock screen" all mean this skill. Also use it
   when writing scripts or CI that must alert a person, and for managing PingRoom
-  rooms, webhooks, quick actions, or the connected agent profile.
+  rooms, webhooks, quick actions, the connected agent profile, or redeeming a
+  PingRoom gift or promotional code.
 ---
 
 # PingRoom: reach a human, get a real answer
@@ -27,7 +28,7 @@ Tool names depend on how the server was added. A server added directly is
 `mcp__plugin_pingroom_mcp_pingroom__<name>`. Match whichever your session
 lists — this file names tools bare (`ask_question`, not the prefixed form).
 
-Read `references/tools.md` for the full 40-tool schema reference when you need
+Read `references/tools.md` for the full 41-tool schema reference when you need
 exact parameters. This file teaches you which tool to reach for and the rules
 that make the difference between "sent" and "landed".
 
@@ -79,6 +80,18 @@ stopped.** If your task ends while a question is open, the human's answer is
 still recorded and readable later with `get_question` — but nothing wakes you
 to act on it. So only open a gate you intend to stay alive for, and say plainly
 that you stopped waiting rather than implying the decision was made.
+
+## Redeem a gift or promotional code
+
+When the human asks to redeem their code, call `redeem_code { code }` with its
+12 letters or digits. This applies Pro to the human who authorized the current
+connection; no room or existing Pro plan is needed. Surrounding whitespace and
+letter case are normalized. Keep the code out of room messages and logs.
+
+Report the returned Pro expiry or lifetime status. Invalid, expired, or used
+codes fail; do not retry a rejected code in a loop. The tool needs
+`pingroom:codes:redeem`, included in `pingroom:full`. If an older credential
+reports `insufficient_scope`, reconnect it to authorize redemption.
 
 ## Picking a room
 

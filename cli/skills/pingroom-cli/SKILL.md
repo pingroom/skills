@@ -12,6 +12,7 @@ description: >-
   attaching a large file to a PingRoom message, wiring Claude Code hooks to a
   phone, or creating/configuring PingRoom rooms and webhooks. If the task is
   conversational (no shell), prefer the sibling `pingroom-mcp` skill.
+  Also use it to redeem a PingRoom gift or promotional code.
 ---
 
 # pingroom CLI: humans in the loop, from a shell
@@ -66,6 +67,25 @@ than a prompt everyone passes.
 
 <!-- shared-body:start — copied verbatim into skills/openclaw/skill/SKILL.md.
      knowledge/tools/audit-knowledge.mjs fails the build if the two drift. -->
+
+## Redeem a gift or promotional code
+
+```bash
+pingroom redeem AB12CD34EF56
+pingroom redeem --code AB12CD34EF56 --json
+```
+
+Requires CLI ≥ 0.10.3. Redemption applies Pro to the human who authorized the
+current connection; no room or existing Pro plan is required. Use the code
+only when that person asks to redeem it. Codes contain 12 letters or digits;
+surrounding whitespace and case are normalized. `PINGROOM_REDEEM_CODE` can
+supply it when neither a positional code nor `--code` is passed, keeping it
+out of command history. Keep codes out of room pings and logs.
+
+Success returns the reward kind, days or package, lifetime flag, and Pro expiry.
+Invalid, expired, or previously used codes fail. On `insufficient_scope`,
+reconnect the credential to authorize code redemption; `pingroom:full` includes
+`pingroom:codes:redeem`. Do not retry a rejected code in a loop.
 
 ## Sending pings
 

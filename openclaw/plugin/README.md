@@ -14,7 +14,7 @@ lock-screen Questions, and exec approvals become approve/deny cards.
 ## Install
 
 ```bash
-openclaw plugins install npm:@pingroom/openclaw-plugin@0.1.3
+openclaw plugins install npm:@pingroom/openclaw-plugin@0.1.4
 openclaw plugins enable pingroom
 ```
 
@@ -132,6 +132,22 @@ webhook in PingRoom to deliver to the gateway URL. The route verifies HMAC-v2
 (or legacy HMAC-v1), then reads the authoritative record before dispatching.
 Polling keeps running either way. The gateway must be reachable by PingRoom.
 
+## Redeem a gift or promotional code
+
+Ask the agent to redeem your code using its `pingroom_redeem_code` tool, or run:
+
+```text
+/pingroom redeem AB12CD34EF56
+```
+
+Both use this plugin's saved PingRoom connection and work without the CLI.
+They are available to the owner in WebChat or a direct-message session.
+Redemption applies Pro to the human who authorized the connection and requires
+no room or existing Pro plan. A successful reply reports the Pro expiry or
+lifetime status without repeating the code. Invalid, expired, or used codes
+fail; a legacy `insufficient_scope` error needs `/pingroom connect` to authorize
+redemption before retrying. `pingroom:full` includes `pingroom:codes:redeem`.
+
 ## Running the CLI from the agent
 
 The plugin bundles the `pingroom` skill and contributes `PINGROOM_HOME` to
@@ -140,7 +156,7 @@ environment. Set `execEnv.injectToken` only if your agent runs sandboxed and
 cannot read the gateway's filesystem — hook-contributed env appears in Gateway
 approval and audit metadata.
 The credential file belongs to the plugin's gateway state directory, has mode
-0600, and is removed when the service stops. Install CLI 0.10.1 or later
+0600, and is removed when the service stops. Install CLI 0.10.3 or later
 separately to use the bundled skill's commands.
 
 If a private handoff or activation reports `recipient_not_ready`, keep the
@@ -162,6 +178,6 @@ openclaw plugins inspect pingroom --runtime --json
 ```
 
 Publish and verify the minimum SDK and CLI versions before releasing this
-package: SDK 0.4.7 and CLI 0.10.2. Update the SDK dependency and lockfile from
+package: SDK 0.4.8 and CLI 0.10.3. Update the SDK dependency and lockfile from
 the registry, then run `npm run prepublishOnly` and inspect `npm pack` contents.
 Keep `package.json`, `openclaw.plugin.json`, and `PLUGIN_VERSION` aligned.

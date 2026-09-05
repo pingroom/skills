@@ -2,7 +2,7 @@
   "id": "pingroom",
   "name": "PingRoom",
   "description": "Reach the human on their phone: pings, tappable Questions, approvals, and handoffs.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "icon": "https://pingroom.io/icon.png",
   "channels": ["pingroom"],
   "activation": {

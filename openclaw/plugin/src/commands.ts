@@ -3,11 +3,12 @@ import type { PairingStart } from "@pingroom/sdk";
 import type { ReplyPayload } from "openclaw/plugin-sdk/reply-payload";
 import { AGENT_LABEL, DEFAULT_BASE_URL, INSTALL_APP_URL, USER_AGENT } from "./constants.js";
 import { apiEndpointUrl, inspectAccount, readChannelConfig } from "./config.js";
+import { redeemCode, redemptionFailureText, redemptionSuccessText } from "./redeem.js";
 
 const PAIRING_QR_MAX_BYTES = 1024 * 1024;
 
 /**
- * `/pingroom connect|status|rooms|disconnect`.
+ * `/pingroom connect|activate|status|rooms|redeem|disconnect`.
  *
  * Named `connect`, never `pair`: OpenClaw already owns `/pair` and `/pairing`
  * for DM allowlist approval, and reusing the word would collide with a core
@@ -114,6 +115,8 @@ export async function runCommand(ctx: CommandContext, deps: CommandDeps): Promis
       return status(ctx);
     case "rooms":
       return rooms(ctx, deps);
+    case "redeem":
+      return redeem(ctx, deps, rest);
     case "disconnect":
       return disconnect(ctx, deps);
     default:
@@ -131,6 +134,7 @@ const HELP = [
   "  /pingroom activate     Send a test Question to confirm your phone can answer (owner only)",
   "  /pingroom status       Show the current connection (owner only)",
   "  /pingroom rooms        List rooms this agent may reach (owner only)",
+  "  /pingroom redeem CODE  Redeem a gift or promotional code for your PingRoom account (owner only)",
   "  /pingroom disconnect   Disconnect this channel (owner only)",
 ].join("\n");
 
@@ -139,6 +143,7 @@ const OWNER_ONLY_MESSAGES: Record<string, string> = {
   activate: "Only the account owner can verify the PingRoom connection.",
   status: "Only the account owner can view the PingRoom connection.",
   rooms: "Only the account owner can list PingRoom rooms.",
+  redeem: "Only the account owner can redeem a PingRoom code.",
   disconnect: "Only the account owner can disconnect PingRoom.",
 };
 
@@ -146,9 +151,10 @@ const PRIVATE_ONLY_MESSAGES: Record<string, string> = {
   connect: "For your security, connect PingRoom in OpenClaw WebChat or a direct-message session.",
   status: "For your security, view the PingRoom connection in OpenClaw WebChat or a direct-message session.",
   rooms: "For your security, list PingRoom rooms in OpenClaw WebChat or a direct-message session.",
+  redeem: "Redeem PingRoom codes in OpenClaw WebChat or a direct-message session.",
 };
 
-function isProvenPrivateSurface(ctx: CommandContext): boolean {
+export function isProvenPrivateSurface(ctx: Pick<CommandContext, "channel" | "sessionKey" | "conversationKind">): boolean {
   if (ctx.channel?.toLowerCase() === "webchat") return true;
   if (ctx.conversationKind === "direct") return true;
   if (ctx.conversationKind === "group" || ctx.conversationKind === "channel") return false;
@@ -650,6 +656,22 @@ async function rooms(ctx: CommandContext, deps: CommandDeps): Promise<CommandRep
   return {
     text: ["Rooms this agent may reach:", ...list.map((r) => `  ${r.name ?? "(unnamed)"} — ${r.invite_code}`)].join("\n"),
   };
+}
+
+async function redeem(ctx: CommandContext, deps: CommandDeps, args: string[]): Promise<CommandReply> {
+  if (args.length !== 1) return { text: "Usage: /pingroom redeem <12-character code>" };
+  const snapshot = inspectAccount(ctx.config);
+  if (!snapshot.enabled || !snapshot.configured) {
+    return { text: "PingRoom is not connected. Run /pingroom connect." };
+  }
+  const code = args[0]!;
+  try {
+    const sdk = deps.connectedClient?.();
+    if (!sdk) return { text: "PingRoom code redemption is unavailable right now." };
+    return { text: redemptionSuccessText(await redeemCode(sdk, code)) };
+  } catch (error) {
+    return { text: redemptionFailureText(error, code) };
+  }
 }
 
 async function disconnect(ctx: CommandContext, deps: CommandDeps): Promise<CommandReply> {

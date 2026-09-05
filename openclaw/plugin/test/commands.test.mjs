@@ -63,7 +63,7 @@ test("help explains the mobile value while keeping installation separate from co
 });
 
 test("connection management fails closed when owner identity is missing or false", async () => {
-  for (const args of ["connect", "status", "rooms", "disconnect"]) {
+  for (const args of ["connect", "status", "rooms", "redeem AB12CD34EF56", "disconnect"]) {
     for (const senderIsOwner of [undefined, false]) {
       const { deps, pairingRequests } = commandHarness();
       const context = {
@@ -80,7 +80,7 @@ test("connection management fails closed when owner identity is missing or false
 });
 
 test("claim links and room invite codes stay out of group conversations", async () => {
-  for (const args of ["connect", "status", "rooms"]) {
+  for (const args of ["connect", "status", "rooms", "redeem AB12CD34EF56"]) {
     const { deps, pairingRequests } = commandHarness();
     const reply = await runCommand({
       args,
