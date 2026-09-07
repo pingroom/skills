@@ -1,7 +1,7 @@
 # PingRoom MCP — complete tool reference
 
 Generated from the live `tools/list` of https://api.pingroom.io/api/agent/mcp
-(41 tools). Regenerate by POSTing `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
+(42 tools). Regenerate by POSTing `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
 to that endpoint. Every tool call is `tools/call`; in Claude Code the tools
 surface as `mcp__pingroom__<name>` when the server was added directly, or as
 `mcp__plugin_pingroom_mcp_pingroom__<name>` when it came from the PingRoom
@@ -12,11 +12,35 @@ Annotations: R = read-only, D = destructive, I = idempotent.
 
 ## connection_info  [RI]
 
-Return this connection's handle, room-access mode, and stable links.
+Return this connection's handle, owner, home room, room-access mode, and stable links.
+`owner.id` is the human's public PingRoom user ID; `owner.name` is their display name.
+After reconnecting, reload the MCP client and compare `owner.id`, `handle`, and
+`home_room` with the account and agent approved by the human. Stop if they do not
+match. A successful OAuth login does not prove an already-running client has
+switched credentials.
 `links.latest_pings` is a newest-first GET feed across the granted rooms and
 requires the saved MCP bearer token in the `Authorization` header.
 `links.install_app` is the token-free mobile handoff; never send credentials to
 that URL.
+
+  (no arguments)
+
+## disconnect  [DI]
+
+Revoke the agent connection making this call, including its access credential
+and OAuth refresh tokens. Use only when the human asks to disconnect, log out,
+reconnect, or switch accounts. This does not revoke another agent or delete the
+human's account or rooms.
+
+Call this **before** clearing the client's saved login. For Codex, follow with
+`codex mcp logout pingroom`, then `codex mcp login pingroom` if reconnecting.
+Restart or reload the original MCP client and verify `connection_info` against
+the approved account and agent before sending. Local logout alone does not
+revoke the server authorization.
+
+Returns `status: "revoked"`, the disconnected `handle`, `owner.id`, `owner.name`,
+and reconnect guidance in `message`. Subsequent calls with that credential are
+rejected, including a repeated disconnect; refresh cannot restore it.
 
   (no arguments)
 

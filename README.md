@@ -9,7 +9,7 @@ handoffs, and lock-screen live progress. Two are plugins and install in both
 
 | Skill | Use it for |
 |---|---|
-| [`pingroom-mcp`](mcp/skills/pingroom-mcp/SKILL.md) | The hosted MCP connector (`https://api.pingroom.io/api/agent/mcp`) — conversational agents: retain a latest-pings feed URL; send pings with locations, links, structured data, and small attachments; ask questions; gate on approvals; hand decisions to your human; drive live-progress cards. Includes a full 41-tool reference generated from the live `tools/list`. |
+| [`pingroom-mcp`](mcp/skills/pingroom-mcp/SKILL.md) | The hosted MCP connector (`https://api.pingroom.io/api/agent/mcp`) — conversational agents: verify connection identity; disconnect before switching accounts; retain a latest-pings feed URL; send pings with locations, links, structured data, and small attachments; ask questions; gate on approvals; hand decisions to your human; drive live-progress cards. Includes a full 42-tool reference from the public MCP registry. |
 | [`pingroom-cli`](cli/skills/pingroom-cli/SKILL.md) | The [`@pingroom/cli`](https://www.npmjs.com/package/@pingroom/cli) — shells, CI, and Claude Code hooks: attachments up to 5 MiB, exit-code gates on human answers, room/webhook/quick-action management. |
 | [`pingroom`](openclaw/skill/SKILL.md) (OpenClaw) | The same CLI, packaged for [OpenClaw](https://docs.openclaw.ai) agents: headless pairing with `pingroom pair`, `skills.entries` credential wiring, and the sandbox caveat. Not a Claude Code plugin — see [Install for OpenClaw](#for-openclaw). |
 
@@ -163,11 +163,31 @@ claude mcp add --transport http pingroom https://api.pingroom.io/api/agent/mcp
 ```
 
 The `pingroom-cli` skill needs a paired CLI: `npm i -g @pingroom/cli && pingroom`.
-The public MCP catalog contains 41 tools. New connections receive the single
+The public MCP catalog contains 42 tools. New connections receive the single
 `pingroom:full` consent grant, which expands to the server's 18 internal
 permissions, including changes to the robot's profile. If a legacy credential
-reports `insufficient_scope`, run `pingroom reconnect` once to replace it with
-a full-access credential.
+reports `insufficient_scope`, reconnect through that client's authorization
+flow to grant full access. `pingroom reconnect` renews the CLI's separate
+credential; it does not replace a running MCP client's login.
+
+After OAuth, call `connection_info` and match `owner.id` (the public PingRoom
+user ID) and `handle` with the intended account and authorization success page,
+then check `home_room` against the intended delivery room before sending.
+After an account switch, refresh `list_rooms`
+instead of reusing a previous room code.
+
+To disconnect MCP or switch accounts, call `disconnect {}` before clearing the
+client's saved login. It revokes the current connection's access and refresh
+tokens on PingRoom, including copies held by other running processes. Then
+log out locally, authorize the intended account, restart or reload the
+original MCP client, and verify `connection_info` again. Stop if the identity
+differs. For Codex CLI, the local commands are `codex mcp logout pingroom` and
+`codex mcp login pingroom`.
+
+If already logged out, revoke the old connection in PingRoom → Settings →
+Connected Agents. Local logout alone does not prove that server access ended.
+Standard OAuth `/oauth/revoke` is advertised for clients that call it. See the
+[full connection guide](https://pingroom.io/connect-mcp.md#disconnect-or-switch-accounts).
 
 ## Redeem gifted codes
 

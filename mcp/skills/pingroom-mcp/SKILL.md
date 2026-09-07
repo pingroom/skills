@@ -28,7 +28,7 @@ Tool names depend on how the server was added. A server added directly is
 `mcp__plugin_pingroom_mcp_pingroom__<name>`. Match whichever your session
 lists — this file names tools bare (`ask_question`, not the prefixed form).
 
-Read `references/tools.md` for the full 41-tool schema reference when you need
+Read `references/tools.md` for the full 42-tool schema reference when you need
 exact parameters. This file teaches you which tool to reach for and the rules
 that make the difference between "sent" and "landed".
 
@@ -44,14 +44,55 @@ claim the separate MCP robot, and choose which rooms it may reach. If OAuth is
 already waiting in the browser, have them return to that same flow after
 installation instead of starting another connection.
 
-## Keep the connection receipt
+## Verify and keep the connection receipt
 
-Call `connection_info` once after OAuth completes and retain
-`links.latest_pings` and `links.install_app`. The first is a stable GET URL for
-the newest pings visible across the granted rooms; the second is the token-free
+Call `connection_info` after OAuth completes, before the first send, and after
+every reconnect or account change. Match `owner.id` (the public PingRoom user
+ID) and `handle` to the intended account and the robot shown on the
+authorization success page, and check `home_room` against the intended
+delivery room. When the user provides an account ID or agent handle, use it
+as the expected identity. If they differ, do not send a test Ping, activate an
+inbox, or reuse a saved room code. A successful
+browser login does not prove the running MCP client adopted the new token.
+
+After an account switch, clear cached room choices and call `list_rooms` again.
+If `home_room` is null, choose or create an appropriate room before testing
+delivery. Retain `links.latest_pings` and `links.install_app` from the verified
+connection. The first is a stable GET URL for the newest pings visible across
+the granted rooms; the second is the token-free
 mobile handoff, and must never receive a credential. `links.latest_pings`
 contains no credential, so send the connection's saved bearer token in the
 `Authorization` header when fetching it.
+
+## Disconnect and reconnect
+
+When the user asks to disconnect or switch PingRoom accounts:
+
+1. Read `connection_info` to identify the current connection. Call
+   `disconnect {}` **before local logout** and check for `status: "revoked"`.
+   This revokes the current registration and its access and refresh tokens;
+   other processes sharing that credential lose access too. Separate
+   registrations remain active.
+2. Clear the client's saved login and authorize the intended account. For
+   Codex CLI, run `codex mcp logout pingroom`, then
+   `codex mcp login pingroom`. Retain the public user ID and agent handle from
+   the success page. Reopening a completed authorization URL in the same
+   browser session shows the same completed flow; do not use it to start
+   another connection.
+3. Restart the original client process, or reload its MCP connection through
+   a supported client control. Call `connection_info` from the session that
+   will send, verify the expected owner ID, handle, and home room, and refresh
+   `list_rooms`. Stop on a mismatch; do not test delivery to an old room.
+
+Local logout alone can leave server authorization active and an existing
+process holding the old credential. If local logout already happened or the
+tool is unavailable, the human can revoke the old connection in PingRoom →
+Settings → Connected Agents. PingRoom also advertises standard OAuth token
+revocation at `/oauth/revoke`; that only helps clients that call it.
+
+Do not automatically disconnect a healthy connection for a phone readiness
+error, transient failure, or token refresh. Revocation requires a new
+authorization to use that connection again.
 
 ## The one rule that matters
 
@@ -255,7 +296,8 @@ also the only send that works in personal rooms. `is_urgent`/`requires_ack`
 elevate a single press without changing the saved configuration.
 
 ### Reading the room
-- `connection_info` — recover the stable latest-pings URL for this connection.
+- `connection_info` — verify the owner ID, agent handle, and home room; recover
+  the stable latest-pings URL for this connection.
 - `list_notifications { type?, date?, limit?, page? }` /
   `get_notification { notification_id }` — history, including `data`,
   `correlation_id`, attachments, and ack state. It spans every approved room;
@@ -275,14 +317,15 @@ on the code, don't retry blindly:
 |---|---|
 | `pro_required` | Attachments/webhooks need Pro. Say so; don't loop. |
 | `room_not_granted` | Room is outside this agent's grant. Ask the human to add it under Connected Agents, or pick a granted room. |
-| `insufficient_scope` / `invalid_credential` | The token uses a legacy partial grant or the wrong audience. Reconnect once for full access, or use the CLI with its separate credential. |
+| `insufficient_scope` | The token uses a legacy partial grant. Follow the disconnect and reconnect flow once for full access, then verify the expected identity. |
+| `invalid_credential` / HTTP 401 | The credential is missing, expired, revoked, or has the wrong audience. Reload the client after login and verify `connection_info`; renew authorization if needed. Never use a saved room code as evidence that the new account connected. |
 | `recipient_not_ready` | Keep the connection. Share the returned `install_url`, then have the human install or update PingRoom, open it, sign in, and enable notifications. Call `activate_agent_inbox` again, then wait for the person to answer its test Question and for `activation_completed: true`; installation alone does not prove the phone is ready. |
 | `attachment_too_large` | Over the MCP result cap — use `pingroom attachment get <id> --out …`. |
 | `validation_failed` | Read the message; commonly a public room with no other member, an unsupported room type, or a length cap. |
 | `quota_exceeded` / HTTP 429 | Back off; respect Retry-After. Never hot-loop a wait tool — they long-poll server-side already. |
 
 New MCP connections receive the single `pingroom:full` consent grant. It
-expands to 17 internal permissions, including permission to edit the robot's
+expands to 18 internal permissions, including permission to edit the robot's
 profile; it does not change the human's account profile. Room grants and
 account-tier limits still apply to every call.
 
