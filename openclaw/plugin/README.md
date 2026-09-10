@@ -14,7 +14,7 @@ lock-screen Questions, and exec approvals become approve/deny cards.
 ## Install
 
 ```bash
-openclaw plugins install npm:@pingroom/openclaw-plugin@0.2.0
+openclaw plugins install npm:@pingroom/openclaw-plugin@0.2.1
 openclaw plugins enable pingroom
 ```
 

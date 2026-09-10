@@ -118,7 +118,7 @@ The channel plugin beside it publishes to npm as
 [`@pingroom/openclaw-plugin`](https://www.npmjs.com/package/@pingroom/openclaw-plugin):
 
 ```bash
-openclaw plugins install npm:@pingroom/openclaw-plugin@0.2.0
+openclaw plugins install npm:@pingroom/openclaw-plugin@0.2.1
 ```
 
 Have the person install or open PingRoom and sign in before pairing:
