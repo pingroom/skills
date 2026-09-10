@@ -194,3 +194,22 @@ test("full-text overflow never makes four media attachments exceed the API cap",
   assert.equal(h.calls.broadcasts[0].attachment_ids.length, 4);
   assert.equal(h.calls.broadcasts.at(-1).data.truncated, true);
 });
+
+test('everyone mode applies to text, URL buttons and media', async (t) => {
+  const h = setup(t, { ackMode: 'all' });
+  await pingroomChannelPlugin.outbound.sendText({ ...h.params, text: 'Confirm text' });
+  await pingroomChannelPlugin.outbound.sendPayload({ ...h.params, text: 'Confirm link', payload: { presentation: link } });
+  await pingroomChannelPlugin.outbound.sendMedia({ ...h.params, mediaUrl: h.file('report.txt') });
+  assert.equal(h.calls.broadcasts.length, 3);
+  for (const body of h.calls.broadcasts) {
+    assert.equal(body.ack_mode, 'all');
+    assert.equal(body.requires_ack, true);
+  }
+});
+
+test('everyone mode does not enable confirmation when requireAck is off', async (t) => {
+  const h = setup(t, { ackMode: 'all', requireAck: false });
+  await pingroomChannelPlugin.outbound.sendText({ ...h.params, text: 'Ordinary ping' });
+  assert.equal(h.calls.broadcasts[0].ack_mode, undefined);
+  assert.equal(h.calls.broadcasts[0].requires_ack, undefined);
+});

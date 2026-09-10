@@ -14,7 +14,7 @@ lock-screen Questions, and exec approvals become approve/deny cards.
 ## Install
 
 ```bash
-openclaw plugins install npm:@pingroom/openclaw-plugin@0.1.4
+openclaw plugins install npm:@pingroom/openclaw-plugin@0.2.0
 openclaw plugins enable pingroom
 ```
 
@@ -178,6 +178,14 @@ openclaw plugins inspect pingroom --runtime --json
 ```
 
 Publish and verify the minimum SDK and CLI versions before releasing this
-package: SDK 0.4.8 and CLI 0.10.3. Update the SDK dependency and lockfile from
+package: SDK 0.5.0 and CLI 0.11.0. Update the SDK dependency and lockfile from
 the registry, then run `npm run prepublishOnly` and inspect `npm pack` contents.
 Keep `package.json`, `openclaw.plugin.json`, and `PLUGIN_VERSION` aligned.
+
+
+Confirmation modes require CLI 0.11.0, SDK 0.5.0, or OpenClaw plugin 0.2.0.
+Use `--require-ack --ack-mode all` in the CLI, or `requires_ack: true` with
+`ack_mode: "all"` over REST/MCP. The default remains `any`.
+For native OpenClaw channel replies, set `channels.pingroom.requireAck: true`
+and `channels.pingroom.ackMode: "all"`; only the first chunk requests confirmation.
+Run `pingroom update` to update an npm global CLI installation.

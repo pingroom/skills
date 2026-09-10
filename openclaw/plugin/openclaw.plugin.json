@@ -2,7 +2,7 @@
   "id": "pingroom",
   "name": "PingRoom",
   "description": "Reach the human on their phone: pings, tappable Questions, approvals, and handoffs.",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "icon": "https://pingroom.io/icon.png",
   "channels": ["pingroom"],
   "activation": {
@@ -57,6 +57,7 @@
           "allowFrom": { "type": "array", "items": { "type": "string" }, "default": [] },
           "urgency": { "type": "string", "enum": ["normal", "urgent"], "default": "normal" },
           "requireAck": { "type": "boolean", "default": false },
+          "ackMode": { "type": "string", "enum": ["any", "all"], "default": "any", "description": "With requireAck enabled, wait for anyone or every original eligible recipient." },
           "visibleReplies": { "type": "string", "enum": ["final", "all"], "default": "final" },
           "maxChunksPerReply": { "type": "integer", "minimum": 1, "maximum": 5, "default": 2 },
           "overflow": { "type": "string", "enum": ["truncate", "attach"], "default": "truncate" },

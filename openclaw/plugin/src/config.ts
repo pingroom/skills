@@ -16,6 +16,7 @@ export interface PingRoomChannelConfig {
   allowFrom?: string[];
   urgency?: "normal" | "urgent";
   requireAck?: boolean;
+  ackMode?: "any" | "all";
   visibleReplies?: "final" | "all";
   maxChunksPerReply?: number;
   overflow?: "truncate" | "attach";
@@ -44,6 +45,7 @@ export interface ResolvedAccount {
   allowFrom: string[];
   urgency: "normal" | "urgent";
   requireAck: boolean;
+  ackMode: "any" | "all";
   visibleReplies: "final" | "all";
   maxChunksPerReply: number;
   overflow: "truncate" | "attach";
@@ -227,6 +229,7 @@ export function resolveAccount(
     allowFrom: Array.isArray(config.allowFrom) ? config.allowFrom.map(String) : [],
     urgency: config.urgency === "urgent" ? "urgent" : "normal",
     requireAck: config.requireAck === true,
+    ackMode: config.ackMode === "all" ? "all" : "any",
     visibleReplies: config.visibleReplies === "all" ? "all" : "final",
     maxChunksPerReply: maxChunks,
     overflow: config.overflow === "attach" ? "attach" : "truncate",

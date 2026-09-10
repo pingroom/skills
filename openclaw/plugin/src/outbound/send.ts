@@ -29,7 +29,7 @@ function broadcastMetadata(ctx: SendContext, first = true): Record<string, unkno
   return {
     ...(ctx.correlationId ? { correlation_id: ctx.correlationId } : {}),
     ...(first && ctx.account.urgency === "urgent" ? { is_urgent: true } : {}),
-    ...(first && ctx.account.requireAck ? { requires_ack: true } : {}),
+    ...(first && ctx.account.requireAck ? { requires_ack: true, ...(ctx.account.ackMode === "all" ? { ack_mode: "all" } : {}) } : {}),
     ...(first && ctx.replyToId ? { reply_to: ctx.replyToId } : {}),
     ...(first && ctx.attachmentIds?.length ? { attachment_ids: ctx.attachmentIds } : {}),
   };

@@ -172,7 +172,10 @@ when the room name alone wouldn't orient the reader.
   asks nothing of the recipient. Reserve it for genuinely time-sensitive events
   or it trains people to ignore it.
 - `requires_ack: true` keeps the ping open with a lock-screen Acknowledge
-  button until one eligible recipient confirms. Add `ack_timeout_seconds`
+  button until the confirmation rule is met. `ack_mode: "any"` (default)
+  resolves on the first confirmation; `ack_mode: "all"` waits for every original
+  eligible recipient. Partial progress stays open: read `confirmed_count` and
+  `required_count` in `action_state`; a timeout is not confirmation. Add `ack_timeout_seconds`
   (60–86400) when the confirmation is only useful for a while, then
   `wait_for_ack { notification_id }`.
 - The two compose: urgent+ack is "wake them and hold the door".

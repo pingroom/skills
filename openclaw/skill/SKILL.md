@@ -15,7 +15,7 @@ description: >-
   delivered to the paired human's phone, so send only what the user has agreed
   to share off-platform, and ask first when the request is ambiguous.
   Also use it when the human asks to redeem a PingRoom gift or promotional code.
-version: 1.0.3
+version: 1.1.0
 homepage: https://pingroom.io/connect-openclaw.md
 user-invocable: true
 metadata:
@@ -31,7 +31,7 @@ metadata:
             {
               "id": "node",
               "kind": "node",
-              "package": "@pingroom/cli@^0.10.3",
+              "package": "@pingroom/cli@^0.11.0",
               "bins": ["pingroom"],
               "label": "Install @pingroom/cli (npm)",
             },
@@ -45,7 +45,7 @@ metadata:
 `pingroom` is a Node ≥ 20 CLI that turns a step in your work into an event on a
 person's phone — a push they feel, a card on their lock screen, a question they
 answer with one tap — and turns their answer back into an exit code you can
-branch on. Requires `@pingroom/cli` ≥ 0.10.3.
+branch on. Requires `@pingroom/cli` ≥ 0.11.0.
 
 > **This sends data off the machine.** Message text, attachments, links and
 > locations you pass to `pingroom` are transmitted to the PingRoom service and
@@ -192,7 +192,7 @@ pingroom ping -m "Review the PR" --url https://github.com/o/r/pull/7 \
 pingroom ping -m "Meet here" --location 48.8584,2.2945 \
               --location-label "Eiffel Tower"                     # map ping
 pingroom ping -m "Alarm!" --urgent                                # breaks Focus
-pingroom ping -m "Confirm receipt" --require-ack --ack-timeout 600
+pingroom ping -m "Confirm receipt" --require-ack --ack-mode all --ack-timeout 600
 pingroom ping -m "Weekly report" --attach report.md --attach data.zip
 pingroom ping -m "build 512 done" -d '{"commit":"abc123","branch":"main"}'
 ```
@@ -202,6 +202,11 @@ Rules that bite:
   validates locally where it can, the server has the final word.
 - `--attach` (repeatable, ≤ 4 files, ≤ 5 MiB each, any type — md, txt, html,
   zip, images, pdf) needs agent-token mode **and a Pro account**.
+- `--ack-mode any` (default) resolves on the first eligible confirmation; `all`
+  waits for every original eligible recipient. Add `--require-ack` when sending
+  a ping. `actions trigger` also accepts the mode for that press. Partial
+  confirmation and a wait timeout are not completion. Requires CLI ≥ 0.11.0.
+- `pingroom update` updates npm global installs; `--check --json` only checks.
 - `--urgent` is delivery-only; `--require-ack` is the confirmation loop. They
   compose. Don't send `--urgent` for routine events — it trains people to
   ignore the alarm that matters.

@@ -81,6 +81,8 @@ Press a room quick action, notifying its members. Rate-limited.
   - `is_urgent` (boolean). Deliver this one press time-sensitive so it breaks through Focus / Do Not Disturb. Send-time only — the action's saved configuration is unchanged.
   - `requires_ack` (boolean). Keep this one press open until an eligible recipient acknowledges it. Send-time only and elevating only: true adds the acknowledgement to an action that has none, false never disables the action's stored ack policy.
 
+  - `ack_mode` (string: `any` | `all`). Confirmation rule for this press when its effective acknowledgement policy is enabled; leaves saved action configuration unchanged.
+
 ## broadcast  [–]
 
 Send a custom ping to a room the account belongs to. Rate-limited. Not available in personal rooms (use trigger_quick_action there).
@@ -102,7 +104,8 @@ Send a custom ping to a room the account belongs to. Rate-limited. Not available
   - `correlation_id` (string) — ≤255 chars. Your own id, echoed back unchanged on read.
   - `reply_to` (string) — ≤255 chars. Id of the ping this one answers (notification id or correlation id).
   - `is_urgent` (boolean). Deliver time-sensitive so the ping breaks through Focus / Do Not Disturb. Independent of requires_ack: urgent affects delivery only and asks nothing of the recipient.
-  - `requires_ack` (boolean). Keep this ping open until one eligible recipient acknowledges it, and show it as a lock-screen card with an Acknowledge button. Does not raise the interruption level on its own — combine with is_urgent for an ack that also breaks through Focus.
+  - `requires_ack` (boolean). Keep this ping open until its confirmation rule is met, and show it as a lock-screen card with an Acknowledge button. Does not raise the interruption level on its own — combine with is_urgent for an ack that also breaks through Focus.
+  - `ack_mode` (string: `any` | `all`). With `requires_ack`, resolve on the first confirmation (default `any`) or wait for every original eligible recipient (`all`).
   - `ack_timeout_seconds` (integer) — 60–86400. Optional acknowledgement deadline in seconds.
   - `attachment_ids` (array) — ≤4 items. Ids of up to 4 uploaded attachments (see upload_attachment) to include. Uploading requires a Pro account.
 
@@ -433,3 +436,10 @@ Set this agent's own avatar — the robot face its pings and Questions wear. Mus
 Rotate this agent's public handle — kill-switch for a leaked handle.
 
   (no arguments)
+
+
+For everyone confirmations, notification reads and `wait_for_ack` preserve
+`action_state.mode`, `confirmed_count`, and `required_count`. `status` remains
+`open` until every required recipient confirms, or becomes `expired` at the
+deadline. MCP omits recipient IDs. Existing `any` responses may omit these new
+fields. A timeout or partial count never proves completion.

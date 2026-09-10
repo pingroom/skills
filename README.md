@@ -118,7 +118,7 @@ The channel plugin beside it publishes to npm as
 [`@pingroom/openclaw-plugin`](https://www.npmjs.com/package/@pingroom/openclaw-plugin):
 
 ```bash
-openclaw plugins install npm:@pingroom/openclaw-plugin@0.1.4
+openclaw plugins install npm:@pingroom/openclaw-plugin@0.2.0
 ```
 
 Have the person install or open PingRoom and sign in before pairing:
@@ -238,3 +238,11 @@ near-identical skill beside `pingroom-cli`.
 - Auth protocol: https://pingroom.io/auth.md
 - MCP connector guide: https://pingroom.io/connect-mcp.md
 - OpenClaw guide: https://pingroom.io/connect-openclaw.md
+
+
+Confirmation modes require CLI 0.11.0, SDK 0.5.0, or OpenClaw plugin 0.2.0.
+Use `--require-ack --ack-mode all` in the CLI, or `requires_ack: true` with
+`ack_mode: "all"` over REST/MCP. The default remains `any`.
+For native OpenClaw channel replies, set `channels.pingroom.requireAck: true`
+and `channels.pingroom.ackMode: "all"`; only the first chunk requests confirmation.
+Run `pingroom update` to update an npm global CLI installation.
