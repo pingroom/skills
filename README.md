@@ -7,6 +7,9 @@ handoffs, and lock-screen live progress. Two are plugins and install in both
 [Grok Build](https://docs.x.ai/build/overview); the third is for
 [OpenClaw](https://docs.openclaw.ai).
 
+**Start here:** [CLI overview and examples](https://github.com/pingroom/cli#use-cases)
+· [MCP overview and setup](mcp/README.md) · [Install a skill](#install).
+
 | Skill | Use it for |
 |---|---|
 | [`pingroom-mcp`](mcp/skills/pingroom-mcp/SKILL.md) | The hosted MCP connector (`https://api.pingroom.io/api/agent/mcp`) — conversational agents: verify connection identity; disconnect before switching accounts; retain a latest-pings feed URL; send pings with locations, links, structured data, and small attachments; ask questions; gate on approvals; hand decisions to your human; drive live-progress cards. Includes a full 42-tool reference from the public MCP registry. |
