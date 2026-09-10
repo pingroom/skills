@@ -1,0 +1,11 @@
+{
+  "name": "pingroom-clawhub-runtime",
+  "version": "1.1.1",
+  "private": true,
+  "dependencies": {
+    "@pingroom/cli": "0.11.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

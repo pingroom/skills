@@ -128,6 +128,13 @@ the claim link to claim the exact robot and choose its rooms. If a pairing is
 already pending, keep it running and return to the same claim link after
 installation and before it expires. Do not start another pairing.
 
+Before connecting, follow the skill's **Install the reviewed CLI** section.
+It installs CLI 0.11.0 locally with `npm ci --ignore-scripts` and the bundled
+lockfile, which verifies SHA-512 integrity for the CLI and its dependencies.
+Use that local executable for pairing and later commands. ClawHub skill 1.1.1
+requires a reviewed skill release to change the CLI pin; global CLI update
+instructions elsewhere in this README do not apply to that installation.
+
 Then connect the CLI without a terminal:
 
 ```bash
@@ -225,7 +232,9 @@ cli/
   .claude-plugin/plugin.json
   skills/pingroom-cli/SKILL.md
 openclaw/
-  skill/SKILL.md                 OpenClaw skill — flat, no plugin.json
+  skill/SKILL.md                 OpenClaw skill, no plugin.json
+  skill/runtime/package.json    exact CLI dependency for the reviewed skill
+  skill/runtime/package-lock.json  locked tarballs and SHA-512 integrity
 ```
 
 `openclaw/` is deliberately outside `marketplace.json`: OpenClaw has no

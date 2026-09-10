@@ -50,11 +50,39 @@ test("the declared skill directory is present and is the real skill", () => {
   const canonical = readFileSync(join(root, "..", "skill", "SKILL.md"), "utf8");
   assert.equal(bundled, canonical, "the bundled skill drifted from ../skill");
   assert.match(bundled, /^name: pingroom$/m);
+  for (const file of ["package.json", "package-lock.json"]) {
+    assert.equal(
+      readFileSync(join(root, skillDir, "runtime", file), "utf8"),
+      readFileSync(join(root, "..", "skill", "runtime", file), "utf8"),
+      `the bundled runtime/${file} drifted from ../skill`,
+    );
+  }
 });
 
 test("manifest and package versions agree", () => {
   assert.equal(manifest.version, pkg.version);
   assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
+});
+
+test("the skill uses an exact, integrity-locked CLI without an alternate installer", () => {
+  const skillRoot = join(root, "..", "skill");
+  const skill = readFileSync(join(skillRoot, "SKILL.md"), "utf8");
+  const runtime = JSON.parse(readFileSync(join(skillRoot, "runtime/package.json"), "utf8"));
+  const lock = JSON.parse(readFileSync(join(skillRoot, "runtime/package-lock.json"), "utf8"));
+  const version = runtime.dependencies["@pingroom/cli"];
+  assert.match(version, /^\d+\.\d+\.\d+$/);
+  assert.doesNotMatch(skill, /"install"\s*:/);
+  assert.equal(lock.packages["node_modules/@pingroom/cli"].version, version);
+  assert.deepEqual(lock.packages[""].dependencies, runtime.dependencies);
+  for (const [name, dependency] of Object.entries(lock.packages)) {
+    if (name === "") continue;
+    assert.match(dependency.version, /^\d+\.\d+\.\d+$/);
+    assert.match(dependency.integrity, /^sha512-[A-Za-z0-9+/]{86}==$/);
+    assert.equal(new URL(dependency.resolved).origin, "https://registry.npmjs.org");
+    for (const child of Object.keys(dependency.dependencies ?? {})) {
+      assert.ok(lock.packages[`node_modules/${child}`], `${child} is not locked`);
+    }
+  }
 });
 
 test("the runtime user agent carries the package version", async () => {

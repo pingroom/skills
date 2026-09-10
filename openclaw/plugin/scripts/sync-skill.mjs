@@ -2,7 +2,7 @@
 // other. The skill has exactly one home — ../skill — and this copies it in at
 // build time; test/manifest.test.mjs asserts the copy is byte-identical.
 import { cpSync, mkdirSync, rmSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -11,5 +11,5 @@ const target = join(here, "..", "skills", "pingroom");
 
 rmSync(target, { recursive: true, force: true });
 mkdirSync(dirname(target), { recursive: true });
-cpSync(source, target, { recursive: true });
+cpSync(source, target, { recursive: true, filter: (path) => basename(path) !== "node_modules" });
 process.stdout.write(`synced skill → ${target}\n`);

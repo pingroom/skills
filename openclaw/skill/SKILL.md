@@ -15,7 +15,7 @@ description: >-
   delivered to the paired human's phone, so send only what the user has agreed
   to share off-platform, and ask first when the request is ambiguous.
   Also use it when the human asks to redeem a PingRoom gift or promotional code.
-version: 1.1.0
+version: 1.1.1
 homepage: https://pingroom.io/connect-openclaw.md
 user-invocable: true
 metadata:
@@ -24,18 +24,8 @@ metadata:
       {
         "emoji": "📣",
         "homepage": "https://pingroom.io/connect-openclaw.md",
-        "requires": { "bins": ["pingroom"] },
+        "requires": { "bins": ["node", "npm"] },
         "primaryEnv": "PINGROOM_TOKEN",
-        "install":
-          [
-            {
-              "id": "node",
-              "kind": "node",
-              "package": "@pingroom/cli@^0.11.0",
-              "bins": ["pingroom"],
-              "label": "Install @pingroom/cli (npm)",
-            },
-          ],
       },
   }
 ---
@@ -45,7 +35,7 @@ metadata:
 `pingroom` is a Node ≥ 20 CLI that turns a step in your work into an event on a
 person's phone — a push they feel, a card on their lock screen, a question they
 answer with one tap — and turns their answer back into an exit code you can
-branch on. Requires `@pingroom/cli` ≥ 0.11.0.
+branch on. This skill pins `@pingroom/cli` to **0.11.0**.
 
 > **This sends data off the machine.** Message text, attachments, links and
 > locations you pass to `pingroom` are transmitted to the PingRoom service and
@@ -54,6 +44,52 @@ branch on. Requires `@pingroom/cli` ≥ 0.11.0.
 > done" do not by themselves mean the user consented to sending *content*
 > off-platform — send the minimum the task needs, and ask before including a
 > file, a location, or anything the user has not already shared.
+
+## Install the reviewed CLI before connecting
+
+Use the bundled [runtime/package.json](runtime/package.json) and
+[runtime/package-lock.json](runtime/package-lock.json). The lock fixes the CLI
+and all five transitive dependencies to specific tarballs and SHA-512 digests.
+From this installed skill's directory, with Node ≥ 20 and npm available:
+
+```bash
+cd runtime
+npm ci --ignore-scripts --no-audit --no-fund
+export PATH="$PWD/node_modules/.bin:$PATH"
+pingroom --version
+```
+
+The version must be `0.11.0`. Keep that absolute bin directory first on `PATH`
+in each command session, or invoke its `pingroom` file by absolute path. Even
+if the CLI is already installed globally, use this local installation:
+`npm ci` verifies every downloaded artifact against the
+bundled lock before use. Stop on an integrity or lock mismatch; do not replace
+the lock, disable verification, or fall back to another executable.
+The skill omits the Skills UI's separate npm installer because it would bypass
+this lockfile.
+
+The reviewed CLI source is
+[commit 2361ed152f734dab1723830b8bbf08947e2006d9](https://github.com/pingroom/cli/tree/2361ed152f734dab1723830b8bbf08947e2006d9).
+Its published tarball must have this integrity value, also stored in the lock:
+
+```text
+sha512-ChiSoQt5C9/lBnVK26YxJdTLitt4eWwoEkoObgF2nimlEF08zbUgeN9BPDm3HwbbIdfbM9JhQ2exeNbxGIA9cA==
+```
+
+This digest pins the reviewed artifact; it is not a claim of signed npm
+provenance. Install before supplying a PingRoom credential. For credentialed
+commands, pass only the required PingRoom configuration and normal runtime
+variables, with access to the credential directory and files the user selected.
+Keep `credentials.json` readable only by its owner. Where a sandbox supports
+network rules, allow `registry.npmjs.org` for installation and
+`api.pingroom.io` for normal API operations; inspect attachment URLs before
+allowing a separate download host.
+
+**Updates:** do not run `pingroom update`, install an unversioned npm package,
+or regenerate this lock as part of using the skill. A new dependency requires
+source and available provenance review, integrity verification, and security
+and compatibility tests before publishing a new skill version with its new
+pin and lock. Update only when the user requests that reviewed skill release.
 
 ## Native plugin redemption
 
@@ -206,7 +242,6 @@ Rules that bite:
   waits for every original eligible recipient. Add `--require-ack` when sending
   a ping. `actions trigger` also accepts the mode for that press. Partial
   confirmation and a wait timeout are not completion. Requires CLI ≥ 0.11.0.
-- `pingroom update` updates npm global installs; `--check --json` only checks.
 - `--urgent` is delivery-only; `--require-ack` is the confirmation loop. They
   compose. Don't send `--urgent` for routine events — it trains people to
   ignore the alarm that matters.
@@ -316,7 +351,7 @@ Webhook creation and attachment upload are Pro. `--json` on any command prints
 the raw response for scripting. `actions set-all` with `--set` or `--actions`
 requires CLI ≥ 0.10.2. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
 prints "unknown command", the installed binary is older than these docs
-(`npm i -g @pingroom/cli` to update, or run from a checkout).
+(check which executable is on `PATH` before retrying).
 
 <!-- shared-body:end -->
 

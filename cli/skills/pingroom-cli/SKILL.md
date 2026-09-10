@@ -65,6 +65,8 @@ answered question exits 0, but an answered APPROVAL exits 0 only on `approve`
 and 4 on `deny`. That is what makes the one-liner above a real gate rather
 than a prompt everyone passes.
 
+`pingroom update` updates npm global installs; `--check --json` only checks.
+
 <!-- shared-body:start — copied verbatim into skills/openclaw/skill/SKILL.md.
      knowledge/tools/audit-knowledge.mjs fails the build if the two drift. -->
 
@@ -111,7 +113,6 @@ Rules that bite:
   waits for every original eligible recipient. Add `--require-ack` when sending
   a ping. `actions trigger` also accepts the mode for that press. Partial
   confirmation and a wait timeout are not completion. Requires CLI ≥ 0.11.0.
-- `pingroom update` updates npm global installs; `--check --json` only checks.
 - `--urgent` is delivery-only; `--require-ack` is the confirmation loop. They
   compose. Don't send `--urgent` for routine events — it trains people to
   ignore the alarm that matters.
@@ -221,7 +222,7 @@ Webhook creation and attachment upload are Pro. `--json` on any command prints
 the raw response for scripting. `actions set-all` with `--set` or `--actions`
 requires CLI ≥ 0.10.2. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
 prints "unknown command", the installed binary is older than these docs
-(`npm i -g @pingroom/cli` to update, or run from a checkout).
+(check which executable is on `PATH` before retrying).
 
 <!-- shared-body:end -->
 

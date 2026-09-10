@@ -1,4 +1,5 @@
 .DS_Store
+node_modules/
 
 # generated ClawHub publish copy (scripts/build-clawhub-skill.mjs)
 openclaw/.clawhub/

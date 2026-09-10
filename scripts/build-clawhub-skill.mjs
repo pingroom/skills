@@ -20,7 +20,7 @@
 // Usage: node scripts/build-clawhub-skill.mjs
 //   then: clawhub skill publish openclaw/.clawhub/pingroom --owner pingroom ...
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -43,7 +43,7 @@ function walk(dir) {
 
 rmSync(target, { recursive: true, force: true });
 mkdirSync(target, { recursive: true });
-cpSync(source, target, { recursive: true });
+cpSync(source, target, { recursive: true, filter: (path) => basename(path) !== "node_modules" });
 
 let stripped = 0;
 for (const file of walk(target)) {
