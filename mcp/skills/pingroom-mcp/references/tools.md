@@ -76,7 +76,7 @@ List the quick actions configured for a room.
 Press a room quick action, notifying its members. Rate-limited.
 
   - `invite_code` (string) **(required)**. Room invite code.
-  - `action_number` (integer) **(required)** — 1–4. Quick-action slot number (1–4).
+  - `action_number` (integer) **(required)** — 1–16. Quick-action slot number (1–16). Slots 5–16 require the room owner to have Pro.
   - `trigger_source` (string) — one of: `manual`, `location`. Defaults to "manual". Only these two are client-settable — "webhook" and "system" are stamped server-side and are rejected here.
   - `is_urgent` (boolean). Deliver this one press time-sensitive so it breaks through Focus / Do Not Disturb. Send-time only — the action's saved configuration is unchanged.
   - `requires_ack` (boolean). Keep this one press open until an eligible recipient acknowledges it. Send-time only and elevating only: true adds the acknowledgement to an action that has none, false never disables the action's stored ack policy.
@@ -90,7 +90,7 @@ Send a custom ping to a room the account belongs to. Rate-limited. Not available
   - `invite_code` (string) **(required)**. Room invite code.
   - `message` (string) **(required)** — ≤160 chars. Ping body text (max 120 characters in private rooms, 160 in public rooms).
   - `title` (string) — ≤40 chars. Optional headline. Defaults to the room name.
-  - `action_number` (integer) — 1–4. Optional quick-action slot to attribute the ping to.
+  - `action_number` (integer) — 1–16. Optional quick-action slot to attribute the ping to. Slots 5–16 require the room owner to have Pro.
   - `action_icon` (string) — ≤50 chars. Optional emoji shown with the ping.
   - `data` (object). Arbitrary structured context (max 25 keys / 8KB). Read surfaces return it after connector privacy filtering; do not put secrets in data. data.location is reserved for a shareable location, and data.url + data.button_label are reserved for a tappable link ping.
     - `data.location` (object). A shareable geographic location.
@@ -137,7 +137,7 @@ Start, update, or end a live progress card on the room members' lock screen (an 
     - `live_status.center` (string). Center score/clock for the matchup template.
     - `live_status.accent_override` (string). Hex #rrggbb; a semantic accent for one frame (e.g. deadline red).
   - `title` (string) — ≤40 chars. Card title. Defaults to the selected quick action's label.
-  - `action` (integer) — 1–4. Quick-action slot to attribute the stream to (supplies the icon and sound).
+  - `action` (integer) — 1–16. Quick-action slot to attribute the stream to (supplies the icon and sound). Slots 5–16 require the room owner to have Pro.
   - `data` (object). Arbitrary structured context (max 25 keys / 8KB), returned on read surfaces after connector privacy filtering. Do not put secrets in data.
   - `requires_ack` (boolean). Add an Acknowledge button; the first eligible member to tap resolves it for everyone. Does not raise the interruption level — set category "alert" for a time-sensitive start.
   - `ack_timeout_seconds` (integer) — 1–86400. Optional acknowledgement deadline in seconds.
@@ -374,7 +374,7 @@ Create an incoming webhook for a room the account owns. The bound account must b
   - `icon` (string). A v3 room-icon catalog id, e.g. "bell". Call list_room_icons to discover the valid ids.
   - `color` (string). Hex color, e.g. "#e33122".
   - `sound` (string). Canonical sound id, e.g. "ting". Omit for the room default.
-  - `action_number` (integer) — 1–4. Quick-action slot to attribute fires to. Auto-assigned if omitted.
+  - `action_number` (integer) — 1–16. Quick-action slot to attribute fires to. Auto-assigned if omitted. Slots 5–16 require the room owner to have Pro.
   - `enabled` (boolean). Whether the webhook is active. Defaults to true.
   - `cooldown_seconds` (integer) — 0–60. Minimum seconds between fires. Defaults to 5.
 
@@ -390,7 +390,7 @@ Update an incoming webhook (by id) on a room the account owns — e.g. change it
   - `icon` (string). A v3 room-icon catalog id, e.g. "bell". Call list_room_icons to discover the valid ids.
   - `color` (string). Hex color, e.g. "#e33122".
   - `sound` (string). Canonical sound id, e.g. "ting".
-  - `action_number` (integer) — 1–4. Quick-action slot to attribute fires to.
+  - `action_number` (integer) — 1–16. Quick-action slot to attribute fires to. Slots 5–16 require the room owner to have Pro.
   - `enabled` (boolean). Whether the webhook is active.
   - `cooldown_seconds` (integer) — 0–60. Minimum seconds between fires.
   - `regenerate_secret` (boolean). Rotate the secret trigger URL.
@@ -407,7 +407,7 @@ Delete an incoming webhook (by id) from a room the account owns.
 Configure a numbered quick-action slot for a room the account owns.
 
   - `invite_code` (string) **(required)**. Room invite code.
-  - `action_number` (integer) **(required)** — 1–4. Quick-action slot number (1–4).
+  - `action_number` (integer) **(required)** — 1–16. Quick-action slot number (1–16). Slots 5–16 require the room owner to have Pro.
   - `label` (string) **(required)** — ≤255 chars. Button label. Must be sent, but may be empty (`""`) — a Ping can be named by its emoji alone, and clients render an untitled one as just the emoji.
   - `icon` (string) **(required)**. Emoji or icon id.
   - `sound` (string). Canonical sound id, e.g. "ting". Omit for the room default.
@@ -418,8 +418,8 @@ Configure a numbered quick-action slot for a room the account owns.
 Configure several of a room's quick-action slots in one call. Prefer this over repeated `update_quick_action`: each single-slot write wakes the owner's device with its own background refresh, so setting up four Pings one at a time spends four of a finite daily push budget on one operation. Slots you do not list are left exactly as they are, so this is also the right tool for editing a single Ping — nothing here deletes an action. Returns the room's full ordered action set.
 
   - `invite_code` (string) **(required)**. Room invite code.
-  - `actions` (array) **(required)** — 1–4 items. The slots to write. Each `action_number` must appear at most once. Each item takes:
-    - `action_number` (integer) **(required)** — 1–4. Quick-action slot number.
+  - `actions` (array) **(required)** — 1–16 items. Add new pages as complete groups of four in order (5–8, 9–12, 13–16); the room owner needs Pro. The slots to write. Each `action_number` must appear at most once. Slots omitted here keep their current configuration — nothing in this tool deletes an action. Each item takes:
+    - `action_number` (integer) **(required)** — 1–16. Quick-action slot number.
     - `label` (string) **(required)** — ≤255 chars. Button label. Must be sent, but may be empty (`""`) — a Ping can be named by its emoji alone.
     - `icon` (string) **(required)**. Emoji or icon id.
     - `sound` (string). Canonical sound id, e.g. "ting". Omit for the room default.

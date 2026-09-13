@@ -116,7 +116,7 @@ Rules that bite:
 - `--urgent` is delivery-only; `--require-ack` is the confirmation loop. They
   compose. Don't send `--urgent` for routine events — it trains people to
   ignore the alarm that matters.
-- `-a <1-4>` attributes the ping to a quick-action slot (its icon + sound).
+- `-a <1-16>` attributes the ping to a quick-action slot (its icon + sound). Slots 5–16 exist only when the room owner has Pro and added those pages.
 
 ## Questions — block a script on a human choice
 
