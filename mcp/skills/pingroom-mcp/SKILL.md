@@ -168,7 +168,7 @@ event, not prose: *what happened, what to do, is it done*. Set a `title` only
 when the room name alone wouldn't orient the reader.
 
 ### Urgent / must-be-confirmed
-- `is_urgent: true` breaks through Focus/Do Not Disturb. Delivery-only — it
+- `is_urgent: true` breaks through Focus/Do Not Disturb and through room and member mutes (never a block). Delivery-only — it
   asks nothing of the recipient. Reserve it for genuinely time-sensitive events
   or it trains people to ignore it.
 - `requires_ack: true` keeps the ping open with a lock-screen Acknowledge

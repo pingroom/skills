@@ -98,7 +98,7 @@ pingroom ping -m "Review the PR" --url https://github.com/o/r/pull/7 \
               --button-label "Open PR"                            # tappable link
 pingroom ping -m "Meet here" --location 48.8584,2.2945 \
               --location-label "Eiffel Tower"                     # map ping
-pingroom ping -m "Alarm!" --urgent                                # breaks Focus
+pingroom ping -m "Alarm!" --urgent                                # breaks Focus and mutes
 pingroom ping -m "Confirm receipt" --require-ack --ack-mode all --ack-timeout 600
 pingroom ping -m "Weekly report" --attach report.md --attach data.zip
 pingroom ping -m "build 512 done" -d '{"commit":"abc123","branch":"main"}'

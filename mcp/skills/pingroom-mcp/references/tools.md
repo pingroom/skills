@@ -78,7 +78,7 @@ Press a room quick action, notifying its members. Rate-limited.
   - `invite_code` (string) **(required)**. Room invite code.
   - `action_number` (integer) **(required)** — 1–16. Quick-action slot number (1–16). Slots 5–16 require the room owner to have Pro.
   - `trigger_source` (string) — one of: `manual`, `location`. Defaults to "manual". Only these two are client-settable — "webhook" and "system" are stamped server-side and are rejected here.
-  - `is_urgent` (boolean). Deliver this one press time-sensitive so it breaks through Focus / Do Not Disturb. Send-time only — the action's saved configuration is unchanged.
+  - `is_urgent` (boolean). Deliver this one press time-sensitive so it breaks through Focus / Do Not Disturb and reaches members who muted the room or you (a block still wins). Send-time only — the action's saved configuration is unchanged.
   - `requires_ack` (boolean). Keep this one press open until an eligible recipient acknowledges it. Send-time only and elevating only: true adds the acknowledgement to an action that has none, false never disables the action's stored ack policy.
 
   - `ack_mode` (string: `any` | `all`). Confirmation rule for this press when its effective acknowledgement policy is enabled; leaves saved action configuration unchanged.
@@ -103,7 +103,7 @@ Send a custom ping to a room the account belongs to. Rate-limited. Not available
     - `data.label` (string). Reserved: short caption shown with the link ping.
   - `correlation_id` (string) — ≤255 chars. Your own id, echoed back unchanged on read.
   - `reply_to` (string) — ≤255 chars. Id of the ping this one answers (notification id or correlation id).
-  - `is_urgent` (boolean). Deliver time-sensitive so the ping breaks through Focus / Do Not Disturb. Independent of requires_ack: urgent affects delivery only and asks nothing of the recipient.
+  - `is_urgent` (boolean). Deliver time-sensitive so the ping breaks through Focus / Do Not Disturb and reaches members who muted the room or you (a block still wins). Independent of requires_ack: urgent affects delivery only and asks nothing of the recipient.
   - `requires_ack` (boolean). Keep this ping open until its confirmation rule is met, and show it as a lock-screen card with an Acknowledge button. Does not raise the interruption level on its own — combine with is_urgent for an ack that also breaks through Focus.
   - `ack_mode` (string: `any` | `all`). With `requires_ack`, resolve on the first confirmation (default `any`) or wait for every original eligible recipient (`all`).
   - `ack_timeout_seconds` (integer) — 60–86400. Optional acknowledgement deadline in seconds.
