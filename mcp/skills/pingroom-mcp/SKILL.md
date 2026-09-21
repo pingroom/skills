@@ -293,7 +293,7 @@ For work longer than ~30 seconds, run a live card instead of spamming pings:
 `get_live_status { invite_code, correlation_id }` reads the current frame.
 
 ### Quick actions
-`list_quick_actions` shows a room's 4 configured buttons;
+`list_quick_actions` shows a room's configured buttons (slots 1–16; slots 5–16 exist only when the owner has Pro);
 `trigger_quick_action { invite_code, action_number }` presses one — this is
 also the only send that works in personal rooms. `is_urgent`/`requires_ack`
 elevate a single press without changing the saved configuration.
