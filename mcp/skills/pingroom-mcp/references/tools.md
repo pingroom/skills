@@ -67,16 +67,21 @@ List the rooms the authenticated account belongs to.
 
 ## list_quick_actions  [RI]
 
-List the quick actions configured for a room.
+List the quick actions configured for a room. Each entry carries `action_number`, `label`, `icon`, `requires_ack` and `input_type` (`none`, `location`, `link`, `file`, `photo` or `pdf`) — read `input_type` before pressing, because a press without the matching detail is refused. A slot whose `label` and `icon` are both empty is reserved but disabled and answers `404 action_not_configured`.
 
   - `invite_code` (string) **(required)**. Room invite code.
 
 ## trigger_quick_action  [–]
 
-Press a room quick action, notifying its members. Rate-limited.
+Press a room quick action, notifying its members. Rate-limited. Read the action's `input_type` first (`list_quick_actions`): `location` needs `data.location`, `link` needs `data.url`, `file`/`photo`/`pdf` need `attachment_ids` — a press without the matching detail is `422 quick_action_input_required` and nothing is sent.
 
   - `invite_code` (string) **(required)**. Room invite code.
-  - `action_number` (integer) **(required)** — 1–16. Quick-action slot number (1–16). Slots 5–16 require the room owner to have Pro.
+  - `action_number` (integer) **(required)** — 1–16. Quick-action slot number (1–16). Slots 5–16 require the room owner to have Pro (`403 pro_required` otherwise); a disabled slot is `404 action_not_configured`.
+  - `data` (object). The detail this press carries; only these two keys are accepted on a trigger (no `button_label`):
+    - `location` (object) — `{ latitude (−90..90), longitude (−180..180), label? (≤100), address? (≤255) }`. Satisfies `input_type: location`.
+    - `url` (string) — ≤2048 chars, absolute http:// or https://. Satisfies `input_type: link`.
+  - `attachment_ids` (array of uuid) — ≤4 items. Ids from `upload_attachment`. Required for `input_type` `file`, `photo` (jpg/png only) or `pdf` (pdf only); a mismatched type is `422 quick_action_input_type`.
+  - `quick_action_id` (string, uuid). Optional id of the action as read from `list_quick_actions`; when that slot has since moved pages the press is refused with `409 quick_action_layout_changed` instead of firing the wrong Ping.
   - `trigger_source` (string) — one of: `manual`, `location`. Defaults to "manual". Only these two are client-settable — "webhook" and "system" are stamped server-side and are rejected here.
   - `is_urgent` (boolean). Deliver this one press time-sensitive so it breaks through Focus / Do Not Disturb and reaches members who muted the room or you (a block still wins). Send-time only — the action's saved configuration is unchanged.
   - `requires_ack` (boolean). Keep this one press open until an eligible recipient acknowledges it. Send-time only and elevating only: true adds the acknowledgement to an action that has none, false never disables the action's stored ack policy.
@@ -326,7 +331,7 @@ Delete an attachment this agent uploaded that is not yet claimed by a ping.
 
 ## get_room  [RI]
 
-Fetch a single room by its invite code, including members and quick actions.
+Fetch a single room by its invite code, including members and quick actions (each with `input_type`), plus `quick_action_limit` (4 or 16) and `quick_action_count`.
 
   - `invite_code` (string) **(required)**. Room invite code.
 
@@ -349,6 +354,9 @@ Create a publicly discoverable room with a unique @handle. Counts toward the fre
   - `description` (string) — ≤120 chars. Short room description shown in public discovery.
   - `category` (string) — ≤100 chars. Discovery category.
   - `show_owner` (boolean). Whether the owner is shown publicly. Defaults to true.
+  - `location_name` (string) — ≤160 chars. Place name shown in nearby discovery. Send all three location fields or none (a partial trio is a 422).
+  - `location_latitude` (number) — −90..90. Latitude in decimal degrees.
+  - `location_longitude` (number) — −180..180. Longitude in decimal degrees.
 
 ## join_room  [DI]
 
@@ -409,9 +417,10 @@ Configure a numbered quick-action slot for a room the account owns.
   - `invite_code` (string) **(required)**. Room invite code.
   - `action_number` (integer) **(required)** — 1–16. Quick-action slot number (1–16). Slots 5–16 require the room owner to have Pro.
   - `label` (string) **(required)** — ≤255 chars. Button label. Must be sent, but may be empty (`""`) — a Ping can be named by its emoji alone, and clients render an untitled one as just the emoji.
-  - `icon` (string) **(required)**. Emoji or icon id.
+  - `icon` (string) **(required)**. Emoji or icon id. Sending `label` and `icon` both empty reserves the slot as disabled (kept in the layout, `404 action_not_configured` on press).
   - `sound` (string). Canonical sound id, e.g. "ting". Omit for the room default.
   - `requires_ack` (boolean). Whether pings from this action remain open until one eligible recipient acknowledges them.
+  - `input_type` (string: `none` | `location` | `link` | `file` | `photo` | `pdf`). Detail every press of this action must carry (see `trigger_quick_action`). Omit to keep the stored value; defaults to `none`.
 
 ## update_quick_actions  [DI]
 
@@ -421,9 +430,10 @@ Configure several of a room's quick-action slots in one call. Prefer this over r
   - `actions` (array) **(required)** — 1–16 items. Add new pages as complete groups of four in order (5–8, 9–12, 13–16); the room owner needs Pro. The slots to write. Each `action_number` must appear at most once. Slots omitted here keep their current configuration — nothing in this tool deletes an action. Each item takes:
     - `action_number` (integer) **(required)** — 1–16. Quick-action slot number.
     - `label` (string) **(required)** — ≤255 chars. Button label. Must be sent, but may be empty (`""`) — a Ping can be named by its emoji alone.
-    - `icon` (string) **(required)**. Emoji or icon id.
+    - `icon` (string) **(required)**. Emoji or icon id. Both `label` and `icon` empty reserves a disabled slot.
     - `sound` (string). Canonical sound id, e.g. "ting". Omit for the room default.
     - `requires_ack` (boolean). Whether pings from this action remain open until one eligible recipient acknowledges them.
+    - `input_type` (string: `none` | `location` | `link` | `file` | `photo` | `pdf`). Detail every press must carry; omit to keep the stored value.
 
 ## set_avatar  [DI]
 
@@ -441,5 +451,7 @@ Rotate this agent's public handle — kill-switch for a leaked handle.
 For everyone confirmations, notification reads and `wait_for_ack` preserve
 `action_state.mode`, `confirmed_count`, and `required_count`. `status` remains
 `open` until every required recipient confirms, or becomes `expired` at the
-deadline. MCP omits recipient IDs. Existing `any` responses may omit these new
-fields. A timeout or partial count never proves completion.
+deadline. `dismissed_count` counts recipients who dismissed the card without
+confirming; a dismissal never counts as a confirmation. MCP omits recipient IDs.
+Existing `any` responses may omit these new fields. A timeout or partial count
+never proves completion.

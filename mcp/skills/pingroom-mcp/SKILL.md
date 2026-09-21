@@ -297,6 +297,14 @@ For work longer than ~30 seconds, run a live card instead of spamming pings:
 `trigger_quick_action { invite_code, action_number }` presses one — this is
 also the only send that works in personal rooms. `is_urgent`/`requires_ack`
 elevate a single press without changing the saved configuration.
+Check each action's `input_type` first: `location` needs
+`data: { location: { latitude, longitude } }`, `link` needs `data: { url }`,
+and `file`/`photo`/`pdf` need `attachment_ids` from `upload_attachment` — a
+press without the matching detail is `422 quick_action_input_required` and
+nothing is sent. Set the requirement with `input_type` on
+`update_quick_action(s)`; pass `quick_action_id` on the press to be refused
+(`409 quick_action_layout_changed`) rather than fire the wrong Ping if the
+owner moved pages meanwhile.
 
 ### Reading the room
 - `connection_info` — verify the owner ID, agent handle, and home room; recover
