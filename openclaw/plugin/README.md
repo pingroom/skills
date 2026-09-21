@@ -14,7 +14,7 @@ lock-screen Questions, and exec approvals become approve/deny cards.
 ## Install
 
 ```bash
-openclaw plugins install npm:@pingroom/openclaw-plugin@0.2.1
+openclaw plugins install npm:@pingroom/openclaw-plugin@0.2.2
 openclaw plugins enable pingroom
 ```
 
@@ -178,7 +178,7 @@ openclaw plugins inspect pingroom --runtime --json
 ```
 
 Publish and verify the minimum SDK and CLI versions before releasing this
-package: SDK 0.5.0 and CLI 0.11.0. Update the SDK dependency and lockfile from
+package: SDK 0.6.0 and CLI 0.12.0. Update the SDK dependency and lockfile from
 the registry, then run `npm run prepublishOnly` and inspect `npm pack` contents.
 Keep `package.json`, `openclaw.plugin.json`, and `PLUGIN_VERSION` aligned.
 

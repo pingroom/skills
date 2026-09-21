@@ -121,7 +121,7 @@ The channel plugin beside it publishes to npm as
 [`@pingroom/openclaw-plugin`](https://www.npmjs.com/package/@pingroom/openclaw-plugin):
 
 ```bash
-openclaw plugins install npm:@pingroom/openclaw-plugin@0.2.1
+openclaw plugins install npm:@pingroom/openclaw-plugin@0.2.2
 ```
 
 Have the person install or open PingRoom and sign in before pairing:
@@ -132,9 +132,9 @@ already pending, keep it running and return to the same claim link after
 installation and before it expires. Do not start another pairing.
 
 Before connecting, follow the skill's **Install the reviewed CLI** section.
-It installs CLI 0.11.0 locally with `npm ci --ignore-scripts` and the bundled
+It installs CLI 0.12.0 locally with `npm ci --ignore-scripts` and the bundled
 lockfile, which verifies SHA-512 integrity for the CLI and its dependencies.
-Use that local executable for pairing and later commands. ClawHub skill 1.1.1
+Use that local executable for pairing and later commands. ClawHub skill 1.2.0
 requires a reviewed skill release to change the CLI pin; global CLI update
 instructions elsewhere in this README do not apply to that installation.
 

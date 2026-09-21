@@ -1,7 +1,7 @@
 {
   "name": "pingroom-cli",
   "description": "Reach a human from shells, CI, and Claude Code hooks with the @pingroom/cli.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": {
     "name": "PingRoom",
     "url": "https://pingroom.io"

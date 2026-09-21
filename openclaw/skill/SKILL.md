@@ -15,7 +15,7 @@ description: >-
   delivered to the paired human's phone, so send only what the user has agreed
   to share off-platform, and ask first when the request is ambiguous.
   Also use it when the human asks to redeem a PingRoom gift or promotional code.
-version: 1.1.1
+version: 1.2.0
 homepage: https://pingroom.io/connect-openclaw.md
 user-invocable: true
 metadata:
@@ -35,7 +35,7 @@ metadata:
 `pingroom` is a Node ≥ 20 CLI that turns a step in your work into an event on a
 person's phone — a push they feel, a card on their lock screen, a question they
 answer with one tap — and turns their answer back into an exit code you can
-branch on. This skill pins `@pingroom/cli` to **0.11.0**.
+branch on. This skill pins `@pingroom/cli` to **0.12.0**.
 
 > **This sends data off the machine.** Message text, attachments, links and
 > locations you pass to `pingroom` are transmitted to the PingRoom service and
@@ -59,7 +59,7 @@ export PATH="$PWD/node_modules/.bin:$PATH"
 pingroom --version
 ```
 
-The version must be `0.11.0`. Keep that absolute bin directory first on `PATH`
+The version must be `0.12.0`. Keep that absolute bin directory first on `PATH`
 in each command session, or invoke its `pingroom` file by absolute path. Even
 if the CLI is already installed globally, use this local installation:
 `npm ci` verifies every downloaded artifact against the
@@ -326,6 +326,8 @@ pingroom rooms icons                                  # browse the icon catalog
 pingroom rooms list|get <code>
 pingroom rooms create -n "Deploys" --icon bell --color "#e33122"
 pingroom rooms create -n "Status" --icon globe --color "#0391fe" --public --handle status
+pingroom rooms create -n "Meetup" --icon globe --color "#0391fe" --public --handle meetup \
+  --location "25.2048,55.2708" --location-name "Dubai Mall"   # listed in nearby discovery
 pingroom rooms join <code>
 
 pingroom webhooks list --room CODE
@@ -336,12 +338,19 @@ pingroom webhooks delete <id> --room CODE
 pingroom actions list --room CODE
 pingroom actions set 3 --room CODE --label "Deploy done" --icon 🚀 --require-ack
 pingroom actions set 4 --room CODE --label "" --icon 🔥   # emoji-only Ping (title optional)
+pingroom actions set 2 --room CODE --label "Where?" --icon 📍 --input-type location  # every press must carry a detail
+pingroom actions set 4 --room CODE --label "" --icon ""    # reserve the slot but disable it
 # Setting up more than one slot? Use set-all — ONE request, so the owner's phone
 # wakes once instead of once per slot. Slots you omit keep what they have.
 pingroom actions set-all --room CODE \
   --set '{"action_number":1,"label":"Deployed","icon":"✅"}' \
   --set '{"action_number":2,"label":"Failed","icon":"❌"}'
 pingroom actions trigger 3 --room CODE
+# A slot with an input type needs its detail or the press is a 422 (nothing sent):
+pingroom actions trigger 2 --room CODE --location "25.2048,55.2708" --location-label "Dubai Mall"  # location
+pingroom actions trigger 2 --room CODE --url https://ci.example.com/run/42   # link
+pingroom actions trigger 2 --room CODE --attach report.pdf                    # file / photo / pdf (Pro)
+pingroom actions layout --room CODE --page-order 1,3   # keep pages 1 and 3 in that order, delete the rest (owner on Pro)
 
 pingroom attachment get <id> --out report.md    # binary-safe download
 pingroom attachment delete <id>
@@ -349,9 +358,11 @@ pingroom attachment delete <id>
 
 Webhook creation and attachment upload are Pro. `--json` on any command prints
 the raw response for scripting. `actions set-all` with `--set` or `--actions`
-requires CLI ≥ 0.10.2. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
-prints "unknown command", the installed binary is older than these docs
-(check which executable is on `PATH` before retrying).
+requires CLI ≥ 0.10.2. `--input-type`, the `actions trigger` detail flags,
+`actions layout` and `rooms create --location` need CLI ≥ 0.12.0. Other
+management nouns need CLI ≥ 0.7.6 — if `pingroom rooms` prints "unknown command"
+or "Unknown option", the installed binary is older than these docs (check which
+executable is on `PATH` before retrying).
 
 <!-- shared-body:end -->
 
@@ -388,7 +399,17 @@ not need a shorter TTL. Two rules:
   optional channel plugin (≥ 0.1.2), use `/pingroom activate` in chat instead;
   that command uses the plugin credential. Installing the app alone does not
   show that the phone is ready.
-- `402 pro_required` — attachments and webhook management need a Pro account.
+- `403`/`402 pro_required` — attachments and webhook management need this
+  account on Pro; quick ping slots 5–16 and `actions layout` need the room
+  owner on Pro.
+- `422 quick_action_input_required` — that Ping needs a detail: read
+  `pingroom actions list` for its input type and retry with `--location`,
+  `--url` or `--attach` (`quick_action_input_type` = wrong attachment type).
+- `404 action_not_configured` — the slot is reserved but disabled; configure
+  it with `actions set` or choose another slot.
+- `409 quick_action_layout_changed` — the pages moved since they were read;
+  re-run `pingroom actions list` and retry.
+- `413 payload_too_large` — attachments are 5 MiB each, at most 4 per ping.
 - `pingroom logout` only clears the local file; the server-side credential stays
   live. Revoke it under Connected Agents, or let the labeled pairing command do it.
 

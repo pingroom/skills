@@ -197,6 +197,8 @@ pingroom rooms icons                                  # browse the icon catalog
 pingroom rooms list|get <code>
 pingroom rooms create -n "Deploys" --icon bell --color "#e33122"
 pingroom rooms create -n "Status" --icon globe --color "#0391fe" --public --handle status
+pingroom rooms create -n "Meetup" --icon globe --color "#0391fe" --public --handle meetup \
+  --location "25.2048,55.2708" --location-name "Dubai Mall"   # listed in nearby discovery
 pingroom rooms join <code>
 
 pingroom webhooks list --room CODE
@@ -207,12 +209,19 @@ pingroom webhooks delete <id> --room CODE
 pingroom actions list --room CODE
 pingroom actions set 3 --room CODE --label "Deploy done" --icon 🚀 --require-ack
 pingroom actions set 4 --room CODE --label "" --icon 🔥   # emoji-only Ping (title optional)
+pingroom actions set 2 --room CODE --label "Where?" --icon 📍 --input-type location  # every press must carry a detail
+pingroom actions set 4 --room CODE --label "" --icon ""    # reserve the slot but disable it
 # Setting up more than one slot? Use set-all — ONE request, so the owner's phone
 # wakes once instead of once per slot. Slots you omit keep what they have.
 pingroom actions set-all --room CODE \
   --set '{"action_number":1,"label":"Deployed","icon":"✅"}' \
   --set '{"action_number":2,"label":"Failed","icon":"❌"}'
 pingroom actions trigger 3 --room CODE
+# A slot with an input type needs its detail or the press is a 422 (nothing sent):
+pingroom actions trigger 2 --room CODE --location "25.2048,55.2708" --location-label "Dubai Mall"  # location
+pingroom actions trigger 2 --room CODE --url https://ci.example.com/run/42   # link
+pingroom actions trigger 2 --room CODE --attach report.pdf                    # file / photo / pdf (Pro)
+pingroom actions layout --room CODE --page-order 1,3   # keep pages 1 and 3 in that order, delete the rest (owner on Pro)
 
 pingroom attachment get <id> --out report.md    # binary-safe download
 pingroom attachment delete <id>
@@ -220,9 +229,11 @@ pingroom attachment delete <id>
 
 Webhook creation and attachment upload are Pro. `--json` on any command prints
 the raw response for scripting. `actions set-all` with `--set` or `--actions`
-requires CLI ≥ 0.10.2. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
-prints "unknown command", the installed binary is older than these docs
-(check which executable is on `PATH` before retrying).
+requires CLI ≥ 0.10.2. `--input-type`, the `actions trigger` detail flags,
+`actions layout` and `rooms create --location` need CLI ≥ 0.12.0. Other
+management nouns need CLI ≥ 0.7.6 — if `pingroom rooms` prints "unknown command"
+or "Unknown option", the installed binary is older than these docs (check which
+executable is on `PATH` before retrying).
 
 <!-- shared-body:end -->
 
@@ -272,8 +283,20 @@ that, or `--dir <path>` to install somewhere else. Requires CLI >= 0.8.0.
   interactively, or export `PINGROOM_TOKEN`.
 - `room_not_granted` → the human scoped this agent to specific rooms; they add
   more under Connected Agents in the app.
-- `pro_required` → attachments/webhooks need the account upgraded; say so
-  instead of retrying.
+- `pro_required` → attachments/webhooks need this account upgraded; quick ping
+  slots 5–16 and `actions layout` need the ROOM OWNER on Pro. Say so instead
+  of retrying.
+- `quick_action_input_required` → that Ping needs a detail: run
+  `pingroom actions list` to see its input type, then retry with `--location`,
+  `--url` or `--attach`. `quick_action_input_type` → the attachment's type does
+  not match (photo = jpg/png, pdf = .pdf).
+- `action_not_configured` → the slot is reserved but disabled (empty label and
+  icon); configure it with `actions set` or pick another slot.
+- `quick_action_layout_changed` → the pages moved since they were read; run
+  `pingroom actions list` and retry. `quick_action_page_in_use` → a time
+  trigger, webhook or agent binding still targets that page; retarget it first.
+- `payload_too_large` (HTTP 413) → the request body exceeded the server limit:
+  attachments are 5 MiB each and at most 4 per ping, `--data` is 8 KB.
 - `recipient_not_ready` → show the server's explanation. Have the human install
   or update PingRoom at <https://pingroom.io/i>, open it, sign in, and enable
   notifications. Then run `pingroom activate`. Do not retry the original
