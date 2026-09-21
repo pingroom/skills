@@ -15,7 +15,7 @@ description: >-
   delivered to the paired human's phone, so send only what the user has agreed
   to share off-platform, and ask first when the request is ambiguous.
   Also use it when the human asks to redeem a PingRoom gift or promotional code.
-version: 1.2.0
+version: 1.2.1
 homepage: https://pingroom.io/connect-openclaw.md
 user-invocable: true
 metadata:
@@ -69,11 +69,11 @@ The skill omits the Skills UI's separate npm installer because it would bypass
 this lockfile.
 
 The reviewed CLI source is
-[commit 2361ed152f734dab1723830b8bbf08947e2006d9](https://github.com/pingroom/cli/tree/2361ed152f734dab1723830b8bbf08947e2006d9).
+[commit 927e0212dc16464da043affde41ed9190c48f86f](https://github.com/pingroom/cli/tree/927e0212dc16464da043affde41ed9190c48f86f).
 Its published tarball must have this integrity value, also stored in the lock:
 
 ```text
-sha512-ChiSoQt5C9/lBnVK26YxJdTLitt4eWwoEkoObgF2nimlEF08zbUgeN9BPDm3HwbbIdfbM9JhQ2exeNbxGIA9cA==
+sha512-7KLGuK0fqprf7p1HEKV1o+cr2GuX9wXe8zlJQk4RUkeQmId5f/oup4dxKFBsEcPYgRuDhL9Nd/dLaf9YTN7rKg==
 ```
 
 This digest pins the reviewed artifact; it is not a claim of signed npm
