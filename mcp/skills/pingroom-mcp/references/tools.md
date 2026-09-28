@@ -116,7 +116,7 @@ Send a custom ping to a room the account belongs to. Rate-limited. Not available
 
 ## live_status  [I]
 
-Start, update, or end a live progress card on the room members' lock screen (an iOS Live Activity / Android live update). Reuse the same correlation_id for every ping of one stream: the first ping starts the card and sends one alert, further "running" pings move it silently, and the first "done"/"failed" sends one completion alert and ends it. Free accounts get a small number of NEW streams per day; updates and the final ping are never charged.
+Start, update, or end a live progress card on the room members' lock screen (an iOS Live Activity / Android live update). Reuse the same correlation_id for every ping of one stream: the first ping starts the card and sends one alert, further "running" pings move it silently, and the first "done"/"failed" sends one completion alert and ends it. Free accounts get a small number of NEW streams per day; updates and the final ping of an open stream are never charged; a first ping that is already "done"/"failed" counts as a new stream.
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `correlation_id` (string) **(required)** — ≤255 chars. The stream key. Reuse it on every ping of the same stream.
