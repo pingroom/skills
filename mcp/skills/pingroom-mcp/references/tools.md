@@ -191,7 +191,7 @@ Long-poll a generic acknowledgement-required ping until an eligible recipient ac
 
 ## request_approval  [–]
 
-Ask the human to approve or reject an action, then block on their answer (pair with wait_for_approval). Delivered as a push to the user. Rate-limited.
+Ask the human to approve or reject an action, then block on their answer (pair with wait_for_approval). Delivered as a push to the room. The connected human must be the room owner or an admin, or the room must allow everyone to trigger; otherwise 403 forbidden (ask_question, which targets only the connected human, has no such requirement). Rate-limited.
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `question` (string) **(required)** — ≤500 chars. What you want the human to decide on.
@@ -382,7 +382,7 @@ Create an incoming webhook for a room the account owns. The bound account must b
   - `icon` (string). A v3 room-icon catalog id, e.g. "bell". Call list_room_icons to discover the valid ids.
   - `color` (string). Hex color, e.g. "#e33122".
   - `sound` (string). Canonical sound id, e.g. "ting". Omit for the room default.
-  - `action_number` (integer) — 1–16. Quick-action slot to attribute fires to. Auto-assigned if omitted. Slots 5–16 require the room owner to have Pro.
+  - `action_number` (integer or null) — 1–16. Quick-action slot whose label, sound, and acknowledgement preset fires use. Omit or pass null for an independent webhook with no Quick Ping preset. Slots 5–16 require the room owner to have Pro.
   - `enabled` (boolean). Whether the webhook is active. Defaults to true.
   - `cooldown_seconds` (integer) — 0–60. Minimum seconds between fires. Defaults to 5.
 
@@ -398,7 +398,7 @@ Update an incoming webhook (by id) on a room the account owns — e.g. change it
   - `icon` (string). A v3 room-icon catalog id, e.g. "bell". Call list_room_icons to discover the valid ids.
   - `color` (string). Hex color, e.g. "#e33122".
   - `sound` (string). Canonical sound id, e.g. "ting".
-  - `action_number` (integer) — 1–16. Quick-action slot to attribute fires to. Slots 5–16 require the room owner to have Pro.
+  - `action_number` (integer or null) — 1–16. Quick-action slot whose label, sound, and acknowledgement preset fires use. Pass null to clear the preset and make the webhook independent. Slots 5–16 require the room owner to have Pro.
   - `enabled` (boolean). Whether the webhook is active.
   - `cooldown_seconds` (integer) — 0–60. Minimum seconds between fires.
   - `regenerate_secret` (boolean). Rotate the secret trigger URL.
