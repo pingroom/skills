@@ -149,7 +149,7 @@ Start, update, or end a live progress card on the room members' lock screen (an 
 
 ## get_live_status  [RI]
 
-Read back the current state of a live stream you created, so a restarted producer can reconcile instead of starting a duplicate. Only returns streams started by this credential, within the last 24 hours. Returns notification_id and correlation_id, then the stored display state (state, progress, message, category, template, accent_override, eta_at, deadline_at, metrics, prompt, options, left, right, center, steps, current_step), action_state, and updated_at. Fields you never set come back as null rather than being omitted, so a matchup/metrics/countdown/question stream can be resumed without re-sending content.
+Read back the current state of a live stream you created, so a restarted producer can reconcile instead of starting a duplicate. Only returns streams started by this credential, within the last 24 hours. Returns notification_id and correlation_id, then the stored display state (state, progress, message, category, template, accent_override, eta_at, deadline_at, duration_seconds, metrics, prompt, options, left, right, center, steps, current_step), action_state, and updated_at. Fields you never set come back as null rather than being omitted, so a matchup/metrics/countdown/question stream can be resumed without re-sending content.
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `correlation_id` (string) **(required)** — ≤255 chars. The stream key used when the stream was started.
