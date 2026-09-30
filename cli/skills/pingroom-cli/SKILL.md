@@ -166,7 +166,8 @@ pingroom live end -c "$CID" -m "All green"        # ends as done; --failed to fa
 ```
 
 Templates: status · steps · progress (`--progress 0..1`) · metrics
-(`--metric label:value` ×3) · countdown (`--deadline-at epoch`) · decision
+(`--metric label:value` ×3) · countdown (`--deadline-at epoch`,
+optional `--duration-seconds n` on start) · decision
 (`--prompt`, `--option v:label` ×4) · matchup (`--left`/`--right`/`--center`).
 The template is fixed at start; one stream per correlation id; **always end
 the stream** even on error paths — trap it:

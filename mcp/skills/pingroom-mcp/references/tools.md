@@ -130,6 +130,7 @@ Start, update, or end a live progress card on the room members' lock screen (an 
     - `live_status.current_step` (integer). Index into steps; the only mutable steps field.
     - `live_status.metrics` (array). Up to 3 {label,value} counters for the metrics template.
     - `live_status.deadline_at` (integer). Epoch seconds the countdown template counts down to.
+    - `live_status.duration_seconds` (integer) — 1–4102444800. Original countdown duration in seconds. Set on creation; preserved through updates and completion.
     - `live_status.eta_at` (integer). Epoch seconds; renders a live ETA on status/progress.
     - `live_status.prompt` (string). The ask, for the question template.
     - `live_status.options` (array). Up to 4 {value,label} choices for the question template.
