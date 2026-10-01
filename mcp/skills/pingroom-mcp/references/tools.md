@@ -192,7 +192,7 @@ Long-poll a generic acknowledgement-required ping until an eligible recipient ac
 
 ## request_approval  [–]
 
-Ask the human to approve or reject an action, then block on their answer (pair with wait_for_approval). Delivered as a push to the room. The connected human must be the room owner or an admin, or the room must allow everyone to trigger; otherwise 403 forbidden (ask_question, which targets only the connected human, has no such requirement). Rate-limited.
+Ask the human to approve or reject an action, then block on their answer (pair with wait_for_approval). Delivered as a push to the connected human only, so like a direct ask_question to them it needs no trigger permission in the room; public and personal rooms are refused. Rate-limited.
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `question` (string) **(required)** — ≤500 chars. What you want the human to decide on.
