@@ -114,7 +114,7 @@ Send a custom ping to a room the account belongs to. Rate-limited. Not available
   - `ack_timeout_seconds` (integer) — 60–86400. Optional acknowledgement deadline in seconds.
   - `attachment_ids` (array) — ≤4 items. Ids of up to 4 uploaded attachments (see upload_attachment) to include. Uploading requires a Pro account.
 
-## live_status  [I]
+## live_status  [DI]
 
 Start, update, or end a live progress card on the room members' lock screen (an iOS Live Activity / Android live update). Reuse the same correlation_id for every ping of one stream: the first ping starts the card and sends one alert, further "running" pings move it silently, and the first "done"/"failed" sends one completion alert and ends it. Free accounts get a small number of NEW streams per day; updates and the final ping of an open stream are never charged; a first ping that is already "done"/"failed" counts as a new stream.
 
@@ -413,7 +413,7 @@ Delete an incoming webhook (by id) from a room the account owns.
 
 ## update_quick_action  [DI]
 
-Configure a numbered quick-action slot for a room the account owns.
+Configure a numbered quick-action slot for a room the account owns. Sends a background room refresh to room members' devices.
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `action_number` (integer) **(required)** — 1–16. Quick-action slot number (1–16). Slots 5–16 require the room owner to have Pro.
@@ -425,7 +425,7 @@ Configure a numbered quick-action slot for a room the account owns.
 
 ## update_quick_actions  [DI]
 
-Configure several of a room's quick-action slots in one call. Prefer this over repeated `update_quick_action`: each single-slot write wakes the owner's device with its own background refresh, so setting up four Pings one at a time spends four of a finite daily push budget on one operation. Slots you do not list are left exactly as they are, so this is also the right tool for editing a single Ping — nothing here deletes an action. Returns the room's full ordered action set.
+Configure several of a room's quick-action slots in one call. Prefer this over repeated `update_quick_action`: each single-slot write wakes room members' devices with its own background refresh, so setting up four Pings one at a time spends four of a finite daily push budget on one operation. Slots you do not list are left exactly as they are, so this is also the right tool for editing a single Ping — nothing here deletes an action. Returns the room's full ordered action set.
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `actions` (array) **(required)** — 1–16 items. Add new pages as complete groups of four in order (5–8, 9–12, 13–16); the room owner needs Pro. The slots to write. Each `action_number` must appear at most once. Slots omitted here keep their current configuration — nothing in this tool deletes an action. Each item takes:
