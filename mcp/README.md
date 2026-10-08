@@ -26,7 +26,7 @@ it in your browser and choose which rooms its robot can access. There is no
 MCP server to run locally and no API key to paste into your client.
 
 **Included:** the [PingRoom MCP skill](skills/pingroom-mcp/SKILL.md),
-a [42-tool reference](skills/pingroom-mcp/references/tools.md), and plugin
+a [41-tool reference](skills/pingroom-mcp/references/tools.md), and plugin
 configurations for Claude Code, Grok Build, and Cursor.
 
 ## Table of contents
