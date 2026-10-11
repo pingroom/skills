@@ -88,7 +88,7 @@ Send a custom ping to a room the account belongs to. Rate-limited. Not available
       - `data.location.longitude` (number). Longitude in decimal degrees.
       - `data.location.label` (string). Optional place name shown to the recipient.
       - `data.location.address` (string). Optional formatted street address.
-    - `data.checklist` (object). A short checklist the room can tick through, e.g. a shopping list. Ticks are kept on each viewer's device, not shared.
+    - `data.checklist` (object). A short checklist the room can tick through, e.g. a shopping list. The room ticks it together: a checked item is checked for everyone, cannot be unchecked, and alerts the other recipients.
       - `data.checklist.items` (array) — 1–25 items. Each item is `{ "text": string }`, 1–80 chars.
     - `data.url` (string). Reserved: an absolute http:// or https:// URL. Present turns the ping into a tappable link.
     - `data.button_label` (string). Reserved: label for the link button rendered for data.url.
@@ -222,7 +222,7 @@ Ask a person a question with 2-4 tappable options, then block on their answer (p
       - `data.location.longitude` (number). Longitude in decimal degrees.
       - `data.location.label` (string). Optional place name shown to the recipient.
       - `data.location.address` (string). Optional formatted street address.
-    - `data.checklist` (object). A short checklist the room can tick through, e.g. a shopping list. Ticks are kept on each viewer's device, not shared.
+    - `data.checklist` (object). A short checklist the room can tick through, e.g. a shopping list. The room ticks it together: a checked item is checked for everyone, cannot be unchecked, and alerts the other recipients.
       - `data.checklist.items` (array) — 1–25 items. Each item is `{ "text": string }`, 1–80 chars.
   - `ttl` (integer) — 1–. Seconds the question stays open before it expires.
   - `attachment_ids` (array) — ≤4 items. Ids of up to 4 uploaded attachments (see upload_attachment) to include. Uploading requires a Pro account.
