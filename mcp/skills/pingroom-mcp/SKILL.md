@@ -182,8 +182,9 @@ are what the human actually reads, so include at least `label`.
 ### Checklist ping
 Put a short list in `data.checklist` — the app shows a Checklist row that opens
 into the items, and the room ticks them off together: the first tick on an item
-checks it for everyone, can't be undone, and alerts the others. Reading the ping
-back returns the ticks as `checklist_state`. The message is the list's title:
+checks it for everyone, can't be undone, and alerts the others. Ticks are not
+in MCP tool results (the REST read, `GET /api/agent/notifications/{id}`,
+carries them as `checklist_state`). The message is the list's title:
 
 ```json
 { "invite_code": "…", "message": "Groceries for tonight",
