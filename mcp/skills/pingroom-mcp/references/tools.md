@@ -82,12 +82,14 @@ Send a custom ping to a room the account belongs to. Rate-limited. Not available
   - `title` (string) — ≤40 chars. Optional headline. Defaults to the room name.
   - `action_number` (integer) — 1–16. Optional quick-action slot to attribute the ping to. Slots 5–16 require the room owner to have Pro.
   - `action_icon` (string) — ≤50 chars. Optional emoji shown with the ping.
-  - `data` (object). Arbitrary structured context (max 25 keys / 8KB). Read surfaces return it after connector privacy filtering; do not put secrets in data. data.location is reserved for a shareable location, and data.url + data.button_label are reserved for a tappable link ping.
+  - `data` (object). Arbitrary structured context (max 25 keys / 8KB). Read surfaces return it after connector privacy filtering; do not put secrets in data. data.location is reserved for a shareable location, data.checklist for a checklist, and data.url + data.button_label are reserved for a tappable link ping.
     - `data.location` (object). A shareable geographic location.
       - `data.location.latitude` (number). Latitude in decimal degrees.
       - `data.location.longitude` (number). Longitude in decimal degrees.
       - `data.location.label` (string). Optional place name shown to the recipient.
       - `data.location.address` (string). Optional formatted street address.
+    - `data.checklist` (object). A short checklist the room can tick through, e.g. a shopping list. Ticks are kept on each viewer's device, not shared.
+      - `data.checklist.items` (array) — 1–25 items. Each item is `{ "text": string }`, 1–80 chars.
     - `data.url` (string). Reserved: an absolute http:// or https:// URL. Present turns the ping into a tappable link.
     - `data.button_label` (string). Reserved: label for the link button rendered for data.url.
     - `data.label` (string). Reserved: short caption shown with the link ping.
@@ -214,12 +216,14 @@ Ask a person a question with 2-4 tappable options, then block on their answer (p
     - `text_input.max_length` (integer). Max characters (default 60).
   - `correlation_id` (string) — ≤255 chars. Your own id, echoed back unchanged on read.
   - `reply_to` (string) — ≤255 chars. Optional routing pointer, echoed back unchanged.
-  - `data` (object). Arbitrary structured context (max 25 keys / 8KB). Read surfaces return it after connector privacy filtering; do not put secrets in data. data.location is reserved for a shareable location.
+  - `data` (object). Arbitrary structured context (max 25 keys / 8KB). Read surfaces return it after connector privacy filtering; do not put secrets in data. data.location is reserved for a shareable location, and data.checklist for a checklist.
     - `data.location` (object). A shareable geographic location.
       - `data.location.latitude` (number). Latitude in decimal degrees.
       - `data.location.longitude` (number). Longitude in decimal degrees.
       - `data.location.label` (string). Optional place name shown to the recipient.
       - `data.location.address` (string). Optional formatted street address.
+    - `data.checklist` (object). A short checklist the room can tick through, e.g. a shopping list. Ticks are kept on each viewer's device, not shared.
+      - `data.checklist.items` (array) — 1–25 items. Each item is `{ "text": string }`, 1–80 chars.
   - `ttl` (integer) — 1–. Seconds the question stays open before it expires.
   - `attachment_ids` (array) — ≤4 items. Ids of up to 4 uploaded attachments (see upload_attachment) to include. Uploading requires a Pro account.
   - `idempotency_key` (string) — ≤255 chars. Stable key so a retried call cannot create a second one.
