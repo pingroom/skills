@@ -15,7 +15,7 @@ description: >-
   delivered to the paired human's phone, so send only what the user has agreed
   to share off-platform, and ask first when the request is ambiguous.
   Also use it when the human asks to redeem a PingRoom gift or promotional code.
-version: 1.2.1
+version: 1.2.2
 homepage: https://pingroom.io/connect-openclaw.md
 user-invocable: true
 metadata:
@@ -35,7 +35,7 @@ metadata:
 `pingroom` is a Node ≥ 20 CLI that turns a step in your work into an event on a
 person's phone — a push they feel, a card on their lock screen, a question they
 answer with one tap — and turns their answer back into an exit code you can
-branch on. This skill pins `@pingroom/cli` to **0.12.0**.
+branch on. This skill pins `@pingroom/cli` to **0.13.0**.
 
 > **This sends data off the machine.** Message text, attachments, links and
 > locations you pass to `pingroom` are transmitted to the PingRoom service and
@@ -59,7 +59,7 @@ export PATH="$PWD/node_modules/.bin:$PATH"
 pingroom --version
 ```
 
-The version must be `0.12.0`. Keep that absolute bin directory first on `PATH`
+The version must be `0.13.0`. Keep that absolute bin directory first on `PATH`
 in each command session, or invoke its `pingroom` file by absolute path. Even
 if the CLI is already installed globally, use this local installation:
 `npm ci` verifies every downloaded artifact against the
@@ -69,11 +69,11 @@ The skill omits the Skills UI's separate npm installer because it would bypass
 this lockfile.
 
 The reviewed CLI source is
-[commit 927e0212dc16464da043affde41ed9190c48f86f](https://github.com/pingroom/cli/tree/927e0212dc16464da043affde41ed9190c48f86f).
+[commit a31dec14095fd6fcfb9e2b334808f438220d9a9a](https://github.com/pingroom/cli/tree/a31dec14095fd6fcfb9e2b334808f438220d9a9a).
 Its published tarball must have this integrity value, also stored in the lock:
 
 ```text
-sha512-7KLGuK0fqprf7p1HEKV1o+cr2GuX9wXe8zlJQk4RUkeQmId5f/oup4dxKFBsEcPYgRuDhL9Nd/dLaf9YTN7rKg==
+sha512-QtFm2TNOaIqz6Mkx836xg8mnFnvGBmBb/+3GMiYIItgafVdI37aV0zuKzjoakLcipGQm+zbtoU0pQv1Qph/fAg==
 ```
 
 This digest pins the reviewed artifact; it is not a claim of signed npm
@@ -361,7 +361,8 @@ pingroom attachment delete <id>
 Webhook creation and attachment upload are Pro. `--json` on any command prints
 the raw response for scripting. `actions set-all` with `--set` or `--actions`
 requires CLI ≥ 0.10.2. `--input-type`, the `actions trigger` detail flags,
-`actions layout` and `rooms create --location` need CLI ≥ 0.12.0. Other
+`actions layout` and `rooms create --location` need CLI ≥ 0.12.0; `ping --item`
+needs CLI ≥ 0.13.0. Other
 management nouns need CLI ≥ 0.7.6 — if `pingroom rooms` prints "unknown command"
 or "Unknown option", the installed binary is older than these docs (check which
 executable is on `PATH` before retrying).

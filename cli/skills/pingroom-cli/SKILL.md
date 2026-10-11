@@ -232,7 +232,8 @@ pingroom attachment delete <id>
 Webhook creation and attachment upload are Pro. `--json` on any command prints
 the raw response for scripting. `actions set-all` with `--set` or `--actions`
 requires CLI ≥ 0.10.2. `--input-type`, the `actions trigger` detail flags,
-`actions layout` and `rooms create --location` need CLI ≥ 0.12.0. Other
+`actions layout` and `rooms create --location` need CLI ≥ 0.12.0; `ping --item`
+needs CLI ≥ 0.13.0. Other
 management nouns need CLI ≥ 0.7.6 — if `pingroom rooms` prints "unknown command"
 or "Unknown option", the installed binary is older than these docs (check which
 executable is on `PATH` before retrying).
