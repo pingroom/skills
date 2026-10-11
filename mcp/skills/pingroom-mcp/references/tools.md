@@ -75,7 +75,7 @@ Press a room quick action, notifying its members. Rate-limited. Read the action'
 
 ## broadcast  [–]
 
-Send a custom ping to a room the account belongs to. Rate-limited. Not available in personal rooms (use trigger_quick_action there).
+Send a custom ping to a room the account belongs to. Pass data.checklist.items to send a checklist the room ticks through together; read the ticks back as checklist_state. Rate-limited. Not available in personal rooms (use trigger_quick_action there).
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `message` (string) **(required)** — ≤160 chars. Ping body text (max 120 characters in private rooms, 160 in public rooms).
@@ -159,7 +159,7 @@ List a bounded page of recent pings across approved rooms, newest first. Use pag
 
 ## get_notification  [RI]
 
-Fetch one visible ping by notification id, including its current action_state.
+Fetch one visible ping by notification id, including its current action_state and, once anything on its data.checklist is checked, checklist_state.
 
   - `notification_id` (string) **(required)**. Room notification id.
 
