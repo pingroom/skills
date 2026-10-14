@@ -15,7 +15,7 @@ description: >-
   delivered to the paired human's phone, so send only what the user has agreed
   to share off-platform, and ask first when the request is ambiguous.
   Also use it when the human asks to redeem a PingRoom gift or promotional code.
-version: 1.2.2
+version: 1.2.3
 homepage: https://pingroom.io/connect-openclaw.md
 user-invocable: true
 metadata:

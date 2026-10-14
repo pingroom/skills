@@ -1,6 +1,6 @@
 {
   "name": "pingroom-clawhub-runtime",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "private": true,
   "dependencies": {
     "@pingroom/cli": "0.13.0"
