@@ -87,7 +87,8 @@ After authorizing, ask your agent:
 
 The agent checks `connection_info`, finds the room with `list_rooms`, and
 sends the message with `broadcast`. For a personal room, it uses
-`trigger_quick_action` instead. The [skill](skills/pingroom-mcp/SKILL.md)
+`trigger_quick_action` instead (a Pro account may also send a text-only
+`broadcast` into someone else's personal room). The [skill](skills/pingroom-mcp/SKILL.md)
 explains how to select the right tool.
 
 ## Use cases

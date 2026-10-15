@@ -125,8 +125,11 @@ that you stopped waiting rather than implying the decision was made.
 
 Call `list_rooms` first (cache the result for the conversation). Rules:
 
-- Personal rooms (`type: "personal"`) refuse `broadcast` — use
-  `trigger_quick_action` there.
+- Personal rooms (`type: "personal"`): use `trigger_quick_action`. Only a
+  Pro account may `broadcast` into someone else's personal room, text only
+  (no attachments, links, locations or checklists), and a visitor gets two
+  pings of either kind until the owner shares contact. Nobody pings their
+  own personal room.
 - Public rooms allow 160-char messages; private rooms 120. Titles cap at 40.
 - A standard private room with one member self-delivers manual sends, which is
   useful for setup and agent-owned rooms. A one-member public room still
