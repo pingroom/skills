@@ -75,11 +75,11 @@ Press a room quick action, notifying its members. Rate-limited. Read the action'
 
 ## broadcast  [–]
 
-Send a custom ping to a room the account belongs to. Pass data.checklist.items to send a checklist the room ticks through together; read the ticks back as checklist_state. Rate-limited. In someone else's personal room only a Pro account may send it, text only, and it counts toward the visitor's two-ping cap; otherwise use trigger_quick_action there.
+Send a custom ping to a room the account belongs to. Pass data.checklist.items to send a checklist the room ticks through together; read the ticks back as checklist_state. Rate-limited. In someone else's personal room only a Pro account may send it, text only, without title, is_urgent or requires_ack (all three are ignored there), and it counts toward the visitor's two-ping cap; otherwise use trigger_quick_action there.
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `message` (string) **(required)** — ≤160 chars. Ping body text (max 120 characters in private rooms, 160 in public rooms).
-  - `title` (string) — ≤40 chars. Optional headline. Defaults to the room name.
+  - `title` (string) — ≤40 chars. Optional headline. Defaults to the room name, which someone else's personal room always keeps.
   - `action_number` (integer) — 1–16. Optional quick-action slot to attribute the ping to. Slots 5–16 require the room owner to have Pro.
   - `action_icon` (string) — ≤50 chars. Optional emoji shown with the ping.
   - `data` (object). Arbitrary structured context (max 25 keys / 8KB). Read surfaces return it after connector privacy filtering; do not put secrets in data. data.location is reserved for a shareable location, data.checklist for a checklist, and data.url + data.button_label are reserved for a tappable link ping.

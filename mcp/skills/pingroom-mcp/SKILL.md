@@ -127,9 +127,9 @@ Call `list_rooms` first (cache the result for the conversation). Rules:
 
 - Personal rooms (`type: "personal"`): use `trigger_quick_action`. Only a
   Pro account may `broadcast` into someone else's personal room, text only
-  (no attachments, links, locations or checklists), and a visitor gets two
-  pings of either kind until the owner shares contact. Nobody pings their
-  own personal room.
+  (no attachments, links, locations or checklists; a `title`, `is_urgent` and
+  `requires_ack` are ignored there), and a visitor gets two pings of either
+  kind until the owner shares contact. Nobody pings their own personal room.
 - Public rooms allow 160-char messages; private rooms 120. Titles cap at 40.
 - A standard private room with one member self-delivers manual sends, which is
   useful for setup and agent-owned rooms. A one-member public room still
@@ -302,7 +302,7 @@ For work longer than ~30 seconds, run a live card instead of spamming pings:
 ### Quick actions
 `list_quick_actions` shows a room's configured buttons (slots 1–16; slots 5–16 exist only when the owner has Pro);
 `trigger_quick_action { invite_code, action_number }` presses one — this is
-also the only send that works in personal rooms. `is_urgent`/`requires_ack`
+also the only send that works in personal rooms without Pro. `is_urgent`/`requires_ack`
 elevate a single press without changing the saved configuration.
 Check each action's `input_type` first: `location` needs
 `data: { location: { latitude, longitude } }`, `link` needs `data: { url }`,
