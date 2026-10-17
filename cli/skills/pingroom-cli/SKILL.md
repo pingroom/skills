@@ -138,6 +138,13 @@ pingroom ask -p "Roll back or keep the canary?" \
 - `--idempotency-key` makes retried creates safe in flaky CI.
 - `--scope room` lets anyone in the room answer; the default `direct` asks the
   connecting account's human.
+- `--poll` asks the whole room for a vote instead (`resolution_policy: all`):
+  everyone in the room except the connecting account's human votes once, and
+  votes are final. It closes when all have voted, or at `--ttl` if anyone did
+  (no votes = expired, exit 3). Options only — not with `--scope direct`,
+  `--target` or `--text-input`. With `--wait`, stdout is the winning value
+  (empty on a tie, still exit 0) and the tally goes to stderr; `--json` returns
+  the full `results`.
 - In GitHub Actions, `--github-output <name>` writes the outcome to
   `$GITHUB_OUTPUT` for later steps.
 
@@ -233,7 +240,8 @@ Webhook creation and attachment upload are Pro. `--json` on any command prints
 the raw response for scripting. `actions set-all` with `--set` or `--actions`
 requires CLI ≥ 0.10.2. `--input-type`, the `actions trigger` detail flags,
 `actions layout` and `rooms create --location` need CLI ≥ 0.12.0; `ping --item`
-and `live start --duration-seconds` need CLI ≥ 0.13.0. Other
+and `live start --duration-seconds` need CLI ≥ 0.13.0; `ask --poll` needs a CLI
+newer than 0.13.0. Other
 management nouns need CLI ≥ 0.7.6 — if `pingroom rooms` prints "unknown command"
 or "Unknown option", the installed binary is older than these docs (check which
 executable is on `PATH` before retrying).
