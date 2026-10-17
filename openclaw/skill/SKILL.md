@@ -269,11 +269,15 @@ pingroom ask -p "Roll back or keep the canary?" \
   connecting account's human.
 - `--poll` asks the whole room for a vote instead (`resolution_policy: all`):
   everyone in the room except the connecting account's human votes once, and
-  votes are final. It closes when all have voted, or at `--ttl` if anyone did
-  (no votes = expired, exit 3). Options only — not with `--scope direct`,
-  `--target` or `--text-input`. With `--wait`, stdout is the winning value
-  (empty on a tie, still exit 0) and the tally goes to stderr; `--json` returns
-  the full `results`.
+  votes are final. It closes once nobody who can still vote owes a vote
+  (people who leave the room, delete their account or get blocked stop counting
+  within about a minute), or at `--ttl` if anyone voted (no votes = expired,
+  exit 3). Options only — not with `--scope direct`, `--target` or
+  `--text-input`. With `--wait`, stdout is the winning value (empty on a tie,
+  still exit 0) and the tally goes to stderr; `--json` returns the full
+  `results`. In a room with nobody else in it the server asks a direct,
+  first-answer question instead (the CLI says so on stderr); a poll nobody in
+  the room can vote in fails with `ask failed` (exit 1).
 - In GitHub Actions, `--github-output <name>` writes the outcome to
   `$GITHUB_OUTPUT` for later steps.
 
