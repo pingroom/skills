@@ -58,7 +58,7 @@ List the quick actions configured for a room. Each entry carries `action_number`
 
 ## trigger_quick_action  [–]
 
-Press a room quick action, notifying its members. Rate-limited. Read the action's `input_type` first (`list_quick_actions`): `location` needs `data.location`, `link` needs `data.url`, `file`/`photo`/`pdf` need `attachment_ids` — a press without the matching detail is `422 quick_action_input_required` and nothing is sent.
+Press a room quick action, notifying its members. Rate-limited. Read the action's `input_type` first (`list_quick_actions`): `location` needs `data.location`, `link` needs `data.url`, `file`/`photo`/`pdf` need `attachment_ids` — a press without the matching detail is `422 quick_action_input_required` and nothing is sent. In someone else's personal room `is_urgent` and `requires_ack` are ignored; only the owner's own setting on the action applies.
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `action_number` (integer) **(required)** — 1–16. Quick-action slot number (1–16). Slots 5–16 require the room owner to have Pro (`403 pro_required` otherwise); a disabled slot is `404 action_not_configured`.
@@ -75,7 +75,7 @@ Press a room quick action, notifying its members. Rate-limited. Read the action'
 
 ## broadcast  [–]
 
-Send a custom ping to a room the account belongs to. Pass data.checklist.items to send a checklist the room ticks through together; read the ticks back as checklist_state. Rate-limited. In someone else's personal room only a Pro account may send it, text only, without title, is_urgent or requires_ack (all three are ignored there), and it counts toward the visitor's two-ping cap; otherwise use trigger_quick_action there.
+Send a custom ping to a room the account belongs to. Pass data.checklist.items to send a checklist the room ticks through together; read the ticks back as checklist_state. Rate-limited. In someone else's personal room only a Pro account may send it, text only (a link in the message is refused too), without title, is_urgent or requires_ack (all three are ignored there), and it counts toward the visitor's two-ping cap; otherwise use trigger_quick_action there.
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `message` (string) **(required)** — ≤160 chars. Ping body text (max 120 characters in private rooms, 160 in public rooms).

@@ -127,8 +127,10 @@ Call `list_rooms` first (cache the result for the conversation). Rules:
 
 - Personal rooms (`type: "personal"`): use `trigger_quick_action`. Only a
   Pro account may `broadcast` into someone else's personal room, text only
-  (no attachments, links, locations or checklists; a `title`, `is_urgent` and
-  `requires_ack` are ignored there), and a visitor gets two pings of either
+  (no attachments, links, locations or checklists, and no link written in the
+  message either — a URL, `www.` address, bare domain or `[label](url)` is
+  `422 personal_room_text_only`; a `title`, `is_urgent` and `requires_ack`
+  are ignored there), and a visitor gets two pings of either
   kind until the owner shares contact. Nobody pings their own personal room.
 - Public rooms allow 160-char messages; private rooms 120. Titles cap at 40.
 - A standard private room with one member self-delivers manual sends, which is
@@ -303,7 +305,9 @@ For work longer than ~30 seconds, run a live card instead of spamming pings:
 `list_quick_actions` shows a room's configured buttons (slots 1–16; slots 5–16 exist only when the owner has Pro);
 `trigger_quick_action { invite_code, action_number }` presses one — this is
 also the only send that works in personal rooms without Pro. `is_urgent`/`requires_ack`
-elevate a single press without changing the saved configuration.
+elevate a single press without changing the saved configuration, except in
+someone else's personal room, where both are ignored and only the owner's own
+setting on the action applies.
 Check each action's `input_type` first: `location` needs
 `data: { location: { latitude, longitude } }`, `link` needs `data: { url }`,
 and `file`/`photo`/`pdf` need `attachment_ids` from `upload_attachment` — a
