@@ -181,7 +181,10 @@ holding `credentials.json` into the container.
   `PINGROOM_TOKEN`, plus `--room <code>` / `PINGROOM_ROOM` /
   `pingroom config set default_room <code>`. Full feature set.
 - **Webhook mode**: `pingroom ping -w <webhook-url>` — the URL carries its own
-  secret, no account needed. Only `ping` supports it.
+  secret, no account needed. Only `ping` supports it. From CLI 0.14.0 an
+  exported `PINGROOM_WEBHOOK_URL` is only the fallback: an explicit `--token`
+  or `--room` takes the agent-token path, and `-w` together with
+  `--token`/`--room` exits 2.
 
 **Exit codes carry the human's answer**: 0 success/answered/acked/approved ·
 1 error · 2 bad usage · 3 expired · 4 cancelled/denied/not-ready.
@@ -190,10 +193,13 @@ holding `credentials.json` into the container.
 if pingroom approval -p "Ship v2 to production?" --wait; then deploy; fi
 ```
 
-`approval` is the only command where the *value* decides the exit code: an
-answered question exits 0, but an answered APPROVAL exits 0 only on `approve`
+An approve/deny gate is the one place the *value* decides the exit code: an
+answered question exits 0, but `approval --wait` exits 0 only on `approve`
 and 4 on `deny`. That is what makes the one-liner above a real gate rather
-than a prompt everyone passes.
+than a prompt everyone passes. From CLI 0.14.0, `pingroom watch <id>` on an
+approve/deny question (an `approval`, or an `ask` with no `-o`) is the same
+gate: 0 on approve, 4 on deny or a tied poll, 3 expired. `ask --wait` still
+exits 0 on any answer.
 
 <!-- shared-body:start — verbatim copy of the same region in
      skills/cli/skills/pingroom-cli/SKILL.md. Edit there, then re-copy; the two
@@ -264,7 +270,10 @@ pingroom ask -p "Roll back or keep the canary?" \
   watch <question-id>` blocks later, `pingroom list` shows state, `pingroom
   cancel <id>` withdraws a stale question (do this — dead questions on a lock
   screen erode trust).
-- `--idempotency-key` makes retried creates safe in flaky CI.
+- `--idempotency-key` makes retried creates safe in flaky CI: reuse the same
+  key when you retry. It takes 1–255 printable ASCII characters; before CLI
+  0.14.0 no spaces, from 0.14.0 interior spaces too, with the ends trimmed as
+  the server does. Anything else exits 2 before a request is sent.
 - `--scope room` lets anyone in the room answer; the default `direct` asks the
   connecting account's human.
 - `--poll` asks the whole room for a vote instead (`resolution_policy: all`):
@@ -369,18 +378,21 @@ pingroom actions trigger 2 --room CODE --attach report.pdf                    # 
 pingroom actions layout --room CODE --page-order 1,3   # keep pages 1 and 3 in that order, delete the rest (owner on Pro)
 
 pingroom attachment get <id> --out report.md    # binary-safe download
+pingroom attachment get <id> --out - | sha256sum   # bytes to stdout (CLI ≥ 0.14.0)
 pingroom attachment delete <id>
 ```
 
 Webhook creation and attachment upload are Pro. `--json` on any command prints
-the raw response for scripting. `actions set-all` with `--set` or `--actions`
-requires CLI ≥ 0.10.2. `--input-type`, the `actions trigger` detail flags,
-`actions layout` and `rooms create --location` need CLI ≥ 0.12.0; `ping --item`
-and `live start --duration-seconds` need CLI ≥ 0.13.0; `ask --poll` needs a CLI
-newer than 0.13.0. Other
-management nouns need CLI ≥ 0.7.6 — if `pingroom rooms` prints "unknown command"
-or "Unknown option", the installed binary is older than these docs (check which
-executable is on `PATH` before retrying).
+the raw response for scripting. From CLI 0.14.0, `attachment get` without
+`--out` refuses to write the bytes to a terminal (exit 2); a pipe or redirect
+still gets them, and `--out -` sends them to stdout on purpose.
+`actions set-all` with `--set` or `--actions` requires CLI ≥ 0.10.2.
+`--input-type`, the `actions trigger` detail flags, `actions layout` and
+`rooms create --location` need CLI ≥ 0.12.0; `ping --item` and
+`live start --duration-seconds` need CLI ≥ 0.13.0; `ask --poll` needs CLI
+≥ 0.14.0. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
+prints "unknown command" or "Unknown option", the installed binary is older
+than these docs (check which executable is on `PATH` before retrying).
 
 <!-- shared-body:end -->
 
@@ -393,6 +405,8 @@ not need a shorter TTL. Two rules:
 
 - **Never report a timeout as an answer.** Exit 3 means the question expired
   with nobody answering; exit 4 means they said no. Say which one happened.
+  With CLI ≥ 0.14.0, exit 1 "PingRoom unavailable since …" means the API stayed
+  down past the expiry plus 5 minutes: no answer either.
 - **Only open a gate you intend to stay alive for.** If your run ends while a
   question is open, the human's answer is still recorded and readable later
   with `pingroom list --state answered`, but nothing wakes you to act on it.

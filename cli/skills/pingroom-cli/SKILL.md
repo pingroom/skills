@@ -31,7 +31,9 @@ terminal to pair, `pingroom pair` where there is no terminal, or set
   `pingroom config set default_room <code>`). Full feature set.
 - **Webhook mode**: `pingroom ping -w <webhook-url>` — the URL carries its own
   secret, no account needed. Best for CI that should only ever ping one room.
-  Only `ping` supports it.
+  Only `ping` supports it. From CLI 0.14.0 an exported `PINGROOM_WEBHOOK_URL`
+  is only the fallback: an explicit `--token` or `--room` takes the
+  agent-token path, and `-w` together with `--token`/`--room` exits 2.
 - Not connected? Bare `pingroom` in an interactive terminal starts QR pairing.
   There is deliberately no `login` subcommand. On a machine with no terminal
   (daemon, container, agent runtime) run `pingroom pair` — it prints the
@@ -60,10 +62,19 @@ gates on them:
 if pingroom approval -p "Ship v2 to production?" --wait; then deploy; fi
 ```
 
-`approval` is the only command where the *value* decides the exit code: an
-answered question exits 0, but an answered APPROVAL exits 0 only on `approve`
+An approve/deny gate is the one place the *value* decides the exit code: an
+answered question exits 0, but `approval --wait` exits 0 only on `approve`
 and 4 on `deny`. That is what makes the one-liner above a real gate rather
-than a prompt everyone passes.
+than a prompt everyone passes. From CLI 0.14.0, `pingroom watch <id>` on an
+approve/deny question (an `approval`, or an `ask` with no `-o`) is the same
+gate: 0 on approve, 4 on deny or a tied poll, 3 expired. `ask --wait` still
+exits 0 on any answer.
+
+Blocking waits (`--wait`, `watch`) ride out an API outage. From CLI 0.14.0
+they warn on stderr after three failures in a row and exit 1 ("PingRoom
+unavailable since …") once the API stays down past the question's or
+handoff's expiry plus 5 minutes, or after 15 minutes of failures for a `watch`
+that has not read the expiry yet. Exit 1 is never an answer.
 
 `pingroom update` updates npm global installs; `--check --json` only checks.
 
@@ -135,7 +146,10 @@ pingroom ask -p "Roll back or keep the canary?" \
   watch <question-id>` blocks later, `pingroom list` shows state, `pingroom
   cancel <id>` withdraws a stale question (do this — dead questions on a lock
   screen erode trust).
-- `--idempotency-key` makes retried creates safe in flaky CI.
+- `--idempotency-key` makes retried creates safe in flaky CI: reuse the same
+  key when you retry. It takes 1–255 printable ASCII characters; before CLI
+  0.14.0 no spaces, from 0.14.0 interior spaces too, with the ends trimmed as
+  the server does. Anything else exits 2 before a request is sent.
 - `--scope room` lets anyone in the room answer; the default `direct` asks the
   connecting account's human.
 - `--poll` asks the whole room for a vote instead (`resolution_policy: all`):
@@ -240,18 +254,21 @@ pingroom actions trigger 2 --room CODE --attach report.pdf                    # 
 pingroom actions layout --room CODE --page-order 1,3   # keep pages 1 and 3 in that order, delete the rest (owner on Pro)
 
 pingroom attachment get <id> --out report.md    # binary-safe download
+pingroom attachment get <id> --out - | sha256sum   # bytes to stdout (CLI ≥ 0.14.0)
 pingroom attachment delete <id>
 ```
 
 Webhook creation and attachment upload are Pro. `--json` on any command prints
-the raw response for scripting. `actions set-all` with `--set` or `--actions`
-requires CLI ≥ 0.10.2. `--input-type`, the `actions trigger` detail flags,
-`actions layout` and `rooms create --location` need CLI ≥ 0.12.0; `ping --item`
-and `live start --duration-seconds` need CLI ≥ 0.13.0; `ask --poll` needs a CLI
-newer than 0.13.0. Other
-management nouns need CLI ≥ 0.7.6 — if `pingroom rooms` prints "unknown command"
-or "Unknown option", the installed binary is older than these docs (check which
-executable is on `PATH` before retrying).
+the raw response for scripting. From CLI 0.14.0, `attachment get` without
+`--out` refuses to write the bytes to a terminal (exit 2); a pipe or redirect
+still gets them, and `--out -` sends them to stdout on purpose.
+`actions set-all` with `--set` or `--actions` requires CLI ≥ 0.10.2.
+`--input-type`, the `actions trigger` detail flags, `actions layout` and
+`rooms create --location` need CLI ≥ 0.12.0; `ping --item` and
+`live start --duration-seconds` need CLI ≥ 0.13.0; `ask --poll` needs CLI
+≥ 0.14.0. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
+prints "unknown command" or "Unknown option", the installed binary is older
+than these docs (check which executable is on `PATH` before retrying).
 
 <!-- shared-body:end -->
 
@@ -277,6 +294,8 @@ ready-to-paste settings block.
 
 # Token mode addresses a room explicitly. `room` is REQUIRED here — a token
 # with no room exits 2, and CI has no `config set default_room` to fall back on.
+# Set webhook-url OR token for a ping: when both are set, the ping goes to the
+# webhook (its URL names the room) and token/room are not used for it.
 - uses: pingroom/cli@v0
   with:
     token: ${{ secrets.PINGROOM_TOKEN }}
@@ -314,13 +333,21 @@ that, or `--dir <path>` to install somewhere else. Requires CLI >= 0.8.0.
   `pingroom actions list` and retry. `quick_action_page_in_use` → a time
   trigger, webhook or agent binding still targets that page; retarget it first.
 - `payload_too_large` (HTTP 413) → the request body exceeded the server limit:
-  attachments are 5 MiB each and at most 4 per ping, `--data` is 8 KB.
+  attachments are 5 MiB each and at most 4 per ping. `--data` is capped at
+  8 KB as the server measures the JSON (each non-ASCII character counts 6
+  bytes; over the cap is a 422, which CLI ≥ 0.14.0 refuses before sending).
+- `… must not contain URL user credentials` (exit 2, CLI ≥ 0.14.0) → drop the
+  `user:pass@` part from `--webhook`, `--api`, `PINGROOM_WEBHOOK_URL`,
+  `PINGROOM_API_URL` or `config set api_url`; a webhook URL carries its secret
+  in the path.
 - `recipient_not_ready` → show the server's explanation. Have the human install
   or update PingRoom at <https://pingroom.io/i>, open it, sign in, and enable
   notifications. Then run `pingroom activate`. Do not retry the original
   command until the person answers its test Question and `pingroom activate`
   reports success; installation alone does not show that the phone is ready.
 - Exit 3 after `--wait` → the human never answered in time. Treat as "no".
+- Exit 1 `PingRoom unavailable since …` after a wait (CLI ≥ 0.14.0) → the API
+  stayed unreachable past the deadline; nobody answered. Report it, don't act.
 - Config lives in `~/.pingroom/` (`PINGROOM_HOME` overrides); `pingroom config
   list` shows it.
 - `insufficient_scope` → the CLI is using a legacy partial credential. Run
