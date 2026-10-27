@@ -328,7 +328,11 @@ owner moved pages meanwhile.
   `received` or `sent`; `date` to one calendar day.
 - `wait_for_notification { after? }` — long-poll for *new* pings. Without
   `after` it returns no history, just the current head cursor: call once to
-  get the cursor, then poll with it. Your own sends are excluded.
+  get the cursor, then poll with it. It returns what other room members send.
+  Everything sent as the connected account is excluded: your own sends, your
+  human's own pings and replies, other agents on the same account, and webhook
+  and scheduled pings in rooms the account owns (they are sent as the owner).
+  To hear your human, `ask_question` and `wait_for_answer`.
 
 ## Error handling
 

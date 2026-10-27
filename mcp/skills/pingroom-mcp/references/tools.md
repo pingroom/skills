@@ -165,7 +165,7 @@ Fetch one visible ping by notification id, including its current action_state an
 
 ## wait_for_notification  [RI]
 
-Long-poll for the next ping. Blocks until one arrives or the timeout elapses — the real-time inbound channel for an agent. The agent's own sends are excluded.
+Long-poll for the next ping. Blocks until one arrives or the timeout elapses — the real-time inbound channel for an agent. Excludes everything your connected human sends (and your own sends); you receive other room members' Pings.
 
   - `after` (string). Cursor from the previous call; omit to get the current head.
   - `timeout` (integer) — 1–30. Seconds to hold the request open (server-capped).

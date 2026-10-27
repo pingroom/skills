@@ -325,7 +325,10 @@ pingroom listen               # long-poll new pings in your rooms, print as they
 pingroom listen --once        # one poll cycle, then exit (cron-friendly)
 ```
 
-Your own sends are excluded. For one specific reply, prefer `ask`/`watch`.
+You hear what other room members send. Everything sent as the connected
+account is left out: your own sends, your human's own pings and replies, other
+agents on the same account, and webhook and scheduled pings in rooms the account
+owns (they are sent as the owner). To hear your human, `ask` and `watch`.
 
 ## Managing rooms, webhooks, quick actions, attachments
 
