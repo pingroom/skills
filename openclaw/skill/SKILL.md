@@ -406,7 +406,8 @@ not need a shorter TTL. Two rules:
 - **Never report a timeout as an answer.** Exit 3 means the question expired
   with nobody answering; exit 4 means they said no. Say which one happened.
   With CLI ≥ 0.14.0, exit 1 "PingRoom unavailable since …" means the API stayed
-  down past the expiry plus 5 minutes: no answer either.
+  down past the expiry plus 5 minutes: no answer could be confirmed. Report the
+  outage, don't act, and read the Question again after access returns.
 - **Only open a gate you intend to stay alive for.** If your run ends while a
   question is open, the human's answer is still recorded and readable later
   with `pingroom list --state answered`, but nothing wakes you to act on it.

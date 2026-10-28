@@ -334,8 +334,9 @@ that, or `--dir <path>` to install somewhere else. Requires CLI >= 0.8.0.
   trigger, webhook or agent binding still targets that page; retarget it first.
 - `payload_too_large` (HTTP 413) → the request body exceeded the server limit:
   attachments are 5 MiB each and at most 4 per ping. `--data` is capped at
-  8 KB as the server measures the JSON (each non-ASCII character counts 6
-  bytes; over the cap is a 422, which CLI ≥ 0.14.0 refuses before sending).
+  8 KB as the server measures the JSON (each non-ASCII UTF-16 code unit counts
+  6 bytes, so an emoji such as 😀 counts 12 bytes; over the cap is a 422,
+  which CLI ≥ 0.14.0 refuses before sending).
 - `… must not contain URL user credentials` (exit 2, CLI ≥ 0.14.0) → drop the
   `user:pass@` part from `--webhook`, `--api`, `PINGROOM_WEBHOOK_URL`,
   `PINGROOM_API_URL` or `config set api_url`; a webhook URL carries its secret
@@ -347,7 +348,8 @@ that, or `--dir <path>` to install somewhere else. Requires CLI >= 0.8.0.
   reports success; installation alone does not show that the phone is ready.
 - Exit 3 after `--wait` → the human never answered in time. Treat as "no".
 - Exit 1 `PingRoom unavailable since …` after a wait (CLI ≥ 0.14.0) → the API
-  stayed unreachable past the deadline; nobody answered. Report it, don't act.
+  stayed unreachable past the deadline; no answer could be confirmed. Report
+  the outage, don't act, and read the Question again after access returns.
 - Config lives in `~/.pingroom/` (`PINGROOM_HOME` overrides); `pingroom config
   list` shows it.
 - `insufficient_scope` → the CLI is using a legacy partial credential. Run
