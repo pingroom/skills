@@ -316,6 +316,11 @@ nothing is sent. Set the requirement with `input_type` on
 `update_quick_action(s)`; pass `quick_action_id` on the press to be refused
 (`409 quick_action_layout_changed`) rather than fire the wrong Ping if the
 owner moved pages meanwhile.
+`trigger_source: "location"` is room owner only: it sends the owner's Location
+Ping ("Arrived at {place}", "Left {place}" or "Location update at {place}") to
+every member instead of the slot's quick action. A non-owner gets
+`403 location_trigger_owner_only`; a room with no enabled location trigger gets
+`409 location_trigger_inactive`. Leave it at `manual` unless you are the owner.
 
 ### Reading the room
 - `connection_info` — verify the owner ID, agent handle, and home room; recover
