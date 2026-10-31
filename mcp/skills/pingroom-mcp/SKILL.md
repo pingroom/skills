@@ -148,7 +148,7 @@ icon, color, handle }`. Two rules the schema alone won't teach you:
   pick an id whose tags fit the room (`bell`, `globe`, `terminal`,
   `paperplane`, …). The server 422s anything off-catalog. Emoji is fine for
   *quick actions*; rooms take catalog ids only.
-- `color` is any `#rrggbb` hex — brand colors welcome (e.g. `#e33122`).
+- `color` is a `#rrggbb` hex — brand colors welcome (e.g. `#e33122`) — that stays visible on both app themes. Near-black and near-white get a `422` asking for another hex.
 
 Free accounts own at most five rooms (`402 room_limit_reached`).
 
