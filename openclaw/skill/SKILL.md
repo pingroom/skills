@@ -37,6 +37,12 @@ person's phone — a push they feel, a card on their lock screen, a question the
 answer with one tap — and turns their answer back into an exit code you can
 branch on. This skill pins `@pingroom/cli` to **0.13.0**.
 
+> **What the pinned 0.13.0 doesn't have.** The command reference below also covers
+> newer CLIs, so anything marked "CLI ≥ 0.14.0" won't work here. `pingroom ask --poll`
+> exits 2 with `Unknown option: --poll`. `pingroom watch <id>` exits 0 on a **denied**
+> approval, so never use it to resume a gate; use `pingroom approval --wait`, which
+> exits 4 on deny.
+
 > **This sends data off the machine.** Message text, attachments, links and
 > locations you pass to `pingroom` are transmitted to the PingRoom service and
 > delivered to the paired human's phone, where they persist in that person's
