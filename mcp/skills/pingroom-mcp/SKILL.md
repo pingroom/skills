@@ -170,6 +170,10 @@ when the room name alone wouldn't orient the reader.
   `required_count` in `action_state`; a timeout is not confirmation. Add `ack_timeout_seconds`
   (60–86400) when the confirmation is only useful for a while, then
   `wait_for_ack { notification_id }`.
+  A `requires_ack` send result carries `confirmation_reach`. With `checked: true`,
+  `unavailable_user_ids` lists recipients whose device cannot show Confirm, who
+  may never confirm, so don't wait on them. `checked: false` means nothing was
+  checked (public rooms, large rooms), not that everyone is reachable.
 - The two compose: urgent+ack is "wake them and hold the door".
 
 ### Location ping
