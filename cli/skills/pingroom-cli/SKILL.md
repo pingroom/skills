@@ -187,8 +187,8 @@ steps under Troubleshooting.
 CID="migrate-$(date +%s)"
 pingroom live start --room CODE -c "$CID" --template steps \
   --steps "Backup,Migrate,Verify" -m "Starting"
-pingroom live update -c "$CID" --step 1 -m "Migrating"
-pingroom live end -c "$CID" -m "All green"        # ends as done; --failed to fail
+pingroom live update --room CODE -c "$CID" --step 1 -m "Migrating"
+pingroom live end --room CODE -c "$CID" -m "All green"   # ends as done; --failed to fail
 ```
 
 Templates: status · steps · progress (`--progress 0..1`) · metrics
@@ -197,7 +197,7 @@ optional `--duration-seconds n` on start) · decision
 (`--prompt`, `--option v:label` ×4) · matchup (`--left`/`--right`/`--center`).
 The template is fixed at start; one stream per correlation id; **always end
 the stream** even on error paths — trap it:
-`trap 'pingroom live end -c "$CID" --failed' ERR`.
+`trap 'pingroom live end --room CODE -c "$CID" --failed' ERR`.
 New streams are budgeted on free accounts; updates and the final ping are
 free. **Live streams are owner-only per room** — in a room the account doesn't
 own, `live` fails with `forbidden`; use a room you own or send one plain ping
