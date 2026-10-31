@@ -353,7 +353,8 @@ on the code, don't retry blindly:
 | `recipient_not_ready` | Keep the connection. Share the returned `install_url`, then have the human install or update PingRoom, open it, sign in, and enable notifications. Call `activate_agent_inbox` again, then wait for the person to answer its test Question and for `activation_completed: true`; installation alone does not prove the phone is ready. |
 | `attachment_too_large` | Over the MCP result cap — use `pingroom attachment get <id> --out …`. |
 | `validation_failed` | Read the message; commonly a public room with no other member, an unsupported room type, or a length cap. |
-| `rate_limited` / `quota_exceeded` / HTTP 429 | Back off; respect `retry_after` / Retry-After. Never hot-loop a wait tool — they long-poll server-side already. |
+| `free_limit_reached` / HTTP 402 | A free account used its daily allowance. Honour `retry_after`, which can be hours away, or tell the human they can upgrade to Pro. Don't loop on it. |
+| `rate_limited` / HTTP 429 | Back off; respect `retry_after` / Retry-After. Never hot-loop a wait tool — they long-poll server-side already. |
 | `feature_disabled` | PingRoom turned that capability off (`feature` names it, e.g. `sending.questions`). Tell the human; don't retry. A ping carrying an attachment, link, location or checklist depends only on that extra's switch. |
 
 New MCP connections receive the single `pingroom:full` consent grant. It
