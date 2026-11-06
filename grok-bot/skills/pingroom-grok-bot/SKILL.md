@@ -341,7 +341,8 @@ limited to 30 a minute.
 Sending a file is Pro:
 
 ```bash
-pingroom ping --room AB12CD -m "Report ready" --attach report.md
+pingroom ping --room AB12CD --idempotency-key "<event id>:2" \
+  -m "Report ready" --attach report.md
 ```
 
 A ping takes up to 4 files of 5 MiB each, as md, pdf, html, txt, jpg, jpeg,
@@ -351,15 +352,13 @@ summary of 120 characters or fewer.
 
 ## Use idempotency keys
 
-- Pass `--idempotency-key <event id>:<n>` on every `pingroom ask`. `<n>` counts
-  that event's asks in order, from 1. A redelivered event then produces the
-  same keys, and PingRoom replays the first result instead of asking twice.
-  Replays cost no quota.
-- CLI 0.15.0 has no `--idempotency-key` on `pingroom ping` or `pingroom live`.
-  Both reject the flag with exit 2 and send nothing. A redelivered event can
-  therefore repeat a ping. Ack each event as soon as its sends are done, to
-  keep that window short. A card update sets state, so repeating one does no
-  harm.
+- Pass `--idempotency-key <event id>:<n>` on every `pingroom ask` and every
+  `pingroom ping`. `<n>` counts that event's asks and pings together, in order,
+  from 1. A redelivered event then produces the same keys, and PingRoom replays
+  the first result instead of asking or pinging twice. Replays cost no quota.
+- `pingroom live` takes no `--idempotency-key` and rejects the flag with exit 2.
+  A card update sets state, so repeating one does no harm. Ack each event as
+  soon as its sends are done.
 
 ## Stay inside Free and Pro limits
 

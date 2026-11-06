@@ -38,8 +38,8 @@ answer with one tap — and turns their answer back into an exit code you can
 branch on. This skill pins `@pingroom/cli` to **0.13.0**.
 
 > **What the pinned 0.13.0 doesn't have.** The command reference below also covers
-> newer CLIs, so anything marked "CLI ≥ 0.14.0" won't work here. `pingroom ask --poll`
-> exits 2 with `Unknown option: --poll`. `pingroom watch <id>` exits 0 on a **denied**
+> newer CLIs, so anything marked "CLI ≥ 0.14.0" or later won't work here. `pingroom ask --poll`
+> exits 2 with `Unknown option: --poll`, and `pingroom ping --idempotency-key` exits 2 the same way. `pingroom watch <id>` exits 0 on a **denied**
 > approval, so never use it to resume a gate; use `pingroom approval --wait`, which
 > exits 4 on deny.
 
@@ -244,6 +244,7 @@ pingroom ping -m "Alarm!" --urgent                                # breaks Focus
 pingroom ping -m "Confirm receipt" --require-ack --ack-mode all --ack-timeout 600
 pingroom ping -m "Weekly report" --attach report.md --attach data.zip
 pingroom ping -m "build 512 done" -d '{"commit":"abc123","branch":"main"}'
+pingroom ping -m "Deploy finished" --idempotency-key "deploy-512"   # a retry replays, never repeats
 ```
 
 Rules that bite:
@@ -259,6 +260,10 @@ Rules that bite:
   compose. Don't send `--urgent` for routine events — it trains people to
   ignore the alarm that matters.
 - `-a <1-16>` attributes the ping to a quick-action slot (its icon + sound). Slots 5–16 exist only when the room owner has Pro and added those pages.
+- `--idempotency-key <key>` on `ping` takes the same rule as on `ask`. Retry
+  with the same key and the server returns the first ping instead of sending
+  another; the same key with a changed request is a 409. It needs agent-token
+  mode: with `--webhook` it exits 2. Requires CLI ≥ 0.15.0.
 
 ## Questions — block a script on a human choice
 
@@ -399,7 +404,7 @@ still gets them, and `--out -` sends them to stdout on purpose.
 `--input-type`, the `actions trigger` detail flags, `actions layout` and
 `rooms create --location` need CLI ≥ 0.12.0; `ping --item` and
 `live start --duration-seconds` need CLI ≥ 0.13.0; `ask --poll` needs CLI
-≥ 0.14.0. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
+≥ 0.14.0; `ping --idempotency-key` needs CLI ≥ 0.15.0. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
 prints "unknown command" or "Unknown option", the installed binary is older
 than these docs (check which executable is on `PATH` before retrying).
 
