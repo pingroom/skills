@@ -24,6 +24,11 @@ codes a script can branch on. A paired credential lives in
 terminal to pair, `pingroom pair` where there is no terminal, or set
 `PINGROOM_TOKEN` in CI.
 
+A Grok Bot routine that PingRoom wakes, holding a bot key as `PINGROOM_TOKEN`,
+follows the `pingroom-grok-bot` skill
+(<https://github.com/pingroom/skills/tree/main/grok-bot/skills/pingroom-grok-bot>)
+for the `pingroom bot` mailbox loop.
+
 ## Auth model — pick the mode before the flags
 
 - **Agent token mode** (default here): the stored credential, or

@@ -5,7 +5,8 @@ Ready-to-install skills for reaching humans through
 handoffs, and lock-screen live progress. Two are plugins and install in both
 [Claude Code](https://code.claude.com/docs) and
 [Grok Build](https://docs.x.ai/build/overview); the third is for
-[OpenClaw](https://docs.openclaw.ai).
+[OpenClaw](https://docs.openclaw.ai). The fourth runs inside a Grok Bot routine
+that PingRoom wakes.
 
 **Start here:** [CLI overview and examples](https://github.com/pingroom/cli#use-cases)
 · [MCP overview and setup](mcp/README.md) · [Install a skill](#install).
@@ -15,6 +16,7 @@ handoffs, and lock-screen live progress. Two are plugins and install in both
 | [`pingroom-mcp`](mcp/skills/pingroom-mcp/SKILL.md) | The hosted MCP connector (`https://api.pingroom.io/api/agent/mcp`) — conversational agents: verify connection identity; disconnect before switching accounts; retain a latest-pings feed URL; send pings with locations, links, structured data, and small attachments; ask questions; gate on approvals; hand decisions to your human; drive live-progress cards. Includes a full 41-tool reference from the public MCP registry. |
 | [`pingroom-cli`](cli/skills/pingroom-cli/SKILL.md) | The [`@pingroom/cli`](https://www.npmjs.com/package/@pingroom/cli) — shells, CI, and Claude Code hooks: attachments up to 5 MiB, exit-code gates on human answers, room/webhook/quick-action management. |
 | [`pingroom`](openclaw/skill/SKILL.md) (OpenClaw) | The same CLI, packaged for [OpenClaw](https://docs.openclaw.ai) agents: headless pairing with `pingroom pair`, `skills.entries` credential wiring, and the sandbox caveat. Not a Claude Code plugin — see [Install for OpenClaw](#for-openclaw). |
+| [`pingroom-grok-bot`](grok-bot/skills/pingroom-grok-bot/SKILL.md) (Grok Bot) | A Grok Bot routine that PingRoom wakes when its owner acts: the `pingroom bot` claim, ack and done loop, what each event's trust allows, approvals, and one Live Activity per task. Its [routine prompt](grok-bot/skills/pingroom-grok-bot/ROUTINE_PROMPT.md) is the routine's instruction. Needs CLI 0.15.0 and a bot connection made at `pingroom.io/app/agents/grok`. Not a Claude Code plugin. |
 
 The first two are Claude Code siblings and cross-reference each other: the MCP
 skill defers to the CLI one for shell work, and the CLI skill defers to MCP for
@@ -238,11 +240,17 @@ openclaw/
   skill/SKILL.md                 OpenClaw skill, no plugin.json
   skill/runtime/package.json    exact CLI dependency for the reviewed skill
   skill/runtime/package-lock.json  locked tarballs and SHA-512 integrity
+grok-bot/
+  skills/pingroom-grok-bot/SKILL.md            Grok Bot skill, no plugin.json
+  skills/pingroom-grok-bot/ROUTINE_PROMPT.md   the routine's instruction
 ```
 
 `openclaw/` is deliberately outside `marketplace.json`: OpenClaw has no
 `plugin.json`, and listing it as a Claude Code plugin would install a second,
-near-identical skill beside `pingroom-cli`.
+near-identical skill beside `pingroom-cli`. `grok-bot/` stays out for a
+different reason. Its skill runs inside a Grok Bot routine holding a bot key,
+and a Claude Code session has neither. Its routine prompt is the same text
+PingRoom's connect page offers to copy, so the two change together.
 
 ## More
 
