@@ -113,7 +113,7 @@ Start, update, or end a live progress card on the room members' lock screen (an 
     - `live_status.category` (string). Legacy rendering category; prefer template. "alert" has NO template equivalent and is the only way to start a stream time-sensitive (breaks through Focus). Fixed at stream creation.
     - `live_status.message` (string). The card's live message line.
     - `live_status.progress` (number). Progress bar / Dynamic Island gauge, 0..1.
-    - `live_status.steps` (array). Step labels. Required on the first ping of a steps stream. They cannot change afterwards: a later ping may resend the identical list or omit it, and a different list is rejected with 422 steps_immutable. Send current_step to advance, or start a new stream with a new correlation_id for a different list.
+    - `live_status.steps` (array). Step labels. Required on the first ping of a steps stream. They cannot change afterwards: a later ping may resend the identical list or omit it, and a different list on a running ping is rejected with 422 steps_immutable (a done/failed ping ignores it and still ends the stream). Send current_step to advance, or start a new stream with a new correlation_id for a different list.
     - `live_status.current_step` (integer). Index into steps; the only mutable steps field.
     - `live_status.metrics` (array). Up to 3 {label,value} counters for the metrics template.
     - `live_status.deadline_at` (integer). Epoch seconds the countdown template counts down to. A later ping may move it; duration_seconds then moves by the same amount. Send the absolute new deadline, never a delta.
