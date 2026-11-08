@@ -1,6 +1,6 @@
 # PingRoom MCP — complete tool reference
 
-Matches the public server registry in source (41 tools). To fetch the live
+Matches the public server registry in source (42 tools). To fetch the live
 catalog, POST `{"jsonrpc":"2.0","id":1,"method":"tools/list"}` to
 https://api.pingroom.io/api/agent/mcp. Every tool call is `tools/call`; in Claude Code the tools
 surface as `mcp__pingroom__<name>` when the server was added directly, or as
@@ -109,7 +109,7 @@ Start, update, or end a live progress card on the room members' lock screen (an 
   - `correlation_id` (string) **(required)** — ≤255 chars. The stream key. Reuse it on every ping of the same stream.
   - `live_status` (object) **(required)**. The live card's state. Only state is required.
     - `live_status.state` (string) **(required)**. running keeps the card live; done/failed end it with one completion alert.
-    - `live_status.template` (string). Which layout the OS renders. Fixed at stream creation.
+    - `live_status.template` (string). Which layout the OS renders. Fixed at stream creation. "claim" is a "Who's on it?" request one member takes on (private rooms only): its text is title (or message), up to 120 characters, an optional deadline_at is at most 8 hours away, and it then moves only through live_claim, or a done/failed ping from you that finishes or cancels it.
     - `live_status.category` (string). Legacy rendering category; prefer template. "alert" has NO template equivalent and is the only way to start a stream time-sensitive (breaks through Focus). Fixed at stream creation.
     - `live_status.message` (string). The card's live message line.
     - `live_status.progress` (number). Progress bar / Dynamic Island gauge, 0..1.
@@ -129,7 +129,7 @@ Start, update, or end a live progress card on the room members' lock screen (an 
       - `live_status.right.value` (string). 
     - `live_status.center` (string). Center score/clock for the matchup template.
     - `live_status.accent_override` (string). Hex #rrggbb; a semantic accent for one frame (e.g. deadline red).
-  - `title` (string) — ≤40 chars. Card title. Defaults to the selected quick action's label.
+  - `title` (string) — ≤120 chars. Card title, up to 40 characters (a claim request's text, up to 120). Defaults to the selected quick action's label.
   - `action` (integer) — 1–16. Quick-action slot to attribute the stream to (supplies the icon and sound). Slots 5–16 require the room owner to have Pro.
   - `data` (object). Arbitrary structured context (max 25 keys / 8KB), returned on read surfaces after connector privacy filtering. Do not put secrets in data.
   - `requires_ack` (boolean). Add an Acknowledge button; the first eligible member to tap resolves it for everyone. Does not raise the interruption level — set category "alert" for a time-sensitive start.
@@ -137,10 +137,18 @@ Start, update, or end a live progress card on the room members' lock screen (an 
 
 ## get_live_status  [RI]
 
-Read back the current state of a live stream you created, so a restarted producer can reconcile instead of starting a duplicate. Only returns streams started by this credential, within the last 24 hours. Returns notification_id and correlation_id, then the stored display state (state, progress, message, category, template, accent_override, eta_at, deadline_at, duration_seconds, metrics, prompt, options, left, right, center, steps, current_step), action_state, and updated_at. Fields you never set come back as null rather than being omitted, so a matchup/metrics/countdown/question stream can be resumed without re-sending content.
+Read back the current state of a live stream you created, so a restarted producer can reconcile instead of starting a duplicate. Only returns streams started by this credential, within the last 24 hours. Returns notification_id and correlation_id, then the stored display state (state, progress, message, category, template, accent_override, eta_at, deadline_at, duration_seconds, metrics, prompt, options, left, right, center, steps, current_step), action_state, and updated_at; a claim request also returns its title and claim (status, by, at, late). Fields you never set come back as null rather than being omitted, so a matchup/metrics/countdown/question stream can be resumed without re-sending content.
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `correlation_id` (string) **(required)** — ≤255 chars. The stream key used when the stream was started.
+
+## live_claim  [DI]
+
+Act on a "Who's on it?" request (a live_status stream with template "claim") as your human: "claim" takes an open request (anyone but its asker), "release" lets go of one you hold, "done" finishes it (its claimer, or its asker at any time) and "cancel" withdraws it (its asker, or a room owner or admin). Two claims at once have one winner: the other gets 409 claim_conflict with the current claim, naming who holds it. Repeating your own last action is a no-op that returns the same claim.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+  - `notification_id` (string) **(required)**. The request's notification id, from list_notifications or the live_status response.
+  - `action` (string: `claim` | `release` | `done` | `cancel`) **(required)**. What to do with the request.
 
 ## list_room_icons  [RI]
 

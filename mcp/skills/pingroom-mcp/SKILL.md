@@ -27,7 +27,7 @@ Tool names depend on how the server was added. A server added directly is
 `mcp__plugin_pingroom_mcp_pingroom__<name>`. Match whichever your session
 lists — this file names tools bare (`ask_question`, not the prefixed form).
 
-Read `references/tools.md` for the full 41-tool schema reference when you need
+Read `references/tools.md` for the full 42-tool schema reference when you need
 exact parameters. This file teaches you which tool to reach for and the rules
 that make the difference between "sent" and "landed".
 
@@ -304,6 +304,17 @@ For work longer than ~30 seconds, run a live card instead of spamming pings:
    constraint and send ONE ordinary ping when the work finishes.
 
 `get_live_status { invite_code, correlation_id }` reads the current frame.
+
+**Who's on it?** A `live_status` stream with `template: "claim"` asks a private
+room who will take a task. Put the request in `title` (1–120 characters) and add
+an optional `deadline_at` at most 8 hours away. Public and personal rooms refuse
+it with `claim_private_rooms_only`. The room can then claim it. Your human acts
+through `live_claim { invite_code, notification_id, action }` with `action` one
+of `claim`, `release`, `done` or `cancel`. That needs only room membership. Two
+claims at once have one winner, and the loser gets `claim_conflict` naming who
+holds it. A request you started ends with `state: "done"` or `"failed"` on its
+`correlation_id`. An open request expires at its deadline, or after 4 hours
+without one.
 
 ### Quick actions
 `list_quick_actions` shows a room's configured buttons (slots 1–16; slots 5–16 exist only when the owner has Pro);

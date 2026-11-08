@@ -13,7 +13,7 @@ that PingRoom wakes.
 
 | Skill | Use it for |
 |---|---|
-| [`pingroom-mcp`](mcp/skills/pingroom-mcp/SKILL.md) | The hosted MCP connector (`https://api.pingroom.io/api/agent/mcp`) — conversational agents: verify connection identity; disconnect before switching accounts; retain a latest-pings feed URL; send pings with locations, links, structured data, and small attachments; ask questions; gate on approvals; hand decisions to your human; drive live-progress cards. Includes a full 41-tool reference from the public MCP registry. |
+| [`pingroom-mcp`](mcp/skills/pingroom-mcp/SKILL.md) | The hosted MCP connector (`https://api.pingroom.io/api/agent/mcp`) — conversational agents: verify connection identity; disconnect before switching accounts; retain a latest-pings feed URL; send pings with locations, links, structured data, and small attachments; ask questions; gate on approvals; hand decisions to your human; drive live-progress cards. Includes a full 42-tool reference from the public MCP registry. |
 | [`pingroom-cli`](cli/skills/pingroom-cli/SKILL.md) | The [`@pingroom/cli`](https://www.npmjs.com/package/@pingroom/cli) — shells, CI, and Claude Code hooks: attachments up to 5 MiB, exit-code gates on human answers, room/webhook/quick-action management. |
 | [`pingroom`](openclaw/skill/SKILL.md) (OpenClaw) | The same CLI, packaged for [OpenClaw](https://docs.openclaw.ai) agents: headless pairing with `pingroom pair`, `skills.entries` credential wiring, and the sandbox caveat. Not a Claude Code plugin — see [Install for OpenClaw](#for-openclaw). |
 | [`pingroom-grok-bot`](grok-bot/skills/pingroom-grok-bot/SKILL.md) (Grok Bot) | A Grok Bot routine that PingRoom wakes when its owner acts: the `pingroom bot` claim, ack and done loop, what each event's trust allows, approvals, and one Live Activity per task. Its [routine prompt](grok-bot/skills/pingroom-grok-bot/ROUTINE_PROMPT.md) is the routine's instruction. Needs CLI 0.15.0 and a bot connection made at `pingroom.io/app/agents/grok`. Not a Claude Code plugin. |
@@ -175,7 +175,7 @@ claude mcp add --transport http pingroom https://api.pingroom.io/api/agent/mcp
 ```
 
 The `pingroom-cli` skill needs a paired CLI: `npm i -g @pingroom/cli && pingroom`.
-The public MCP catalog contains 41 tools. New connections receive the single
+The public MCP catalog contains 42 tools. New connections receive the single
 `pingroom:full` consent grant, which expands to the server's 18 internal
 permissions, including changes to the robot's profile. If a legacy credential
 reports `insufficient_scope`, reconnect through that client's authorization
