@@ -159,13 +159,22 @@ export class PingRoomAccountService {
         backoffMs = 1000;
         this.deps.setStatus?.({ lifecycle: "connected" });
 
+        let retryBatch = false;
         for (const raw of result?.notifications ?? []) {
           const notification = raw as Parameters<typeof isConversational>[0];
           if (!isConversational(notification)) continue;
-          await this.handle(
-            { type: "ping", id: notification.id, notification },
-            () => this.deps.onPing({ type: "ping", id: notification.id, notification }),
-          );
+          const event = { type: "ping", id: notification.id, notification } as const;
+          try {
+            await this.handle(event, () => this.deps.onPing(event));
+            this.failures.delete(dedupeKey(event));
+          } catch {
+            if (this.signal.aborted) return;
+            retryBatch = this.recordFailure(dedupeKey(event)) || retryBatch;
+          }
+        }
+        if (retryBatch) {
+          await sleep(HANDLER_RETRY_DELAY_MS, this.signal);
+          continue;
         }
         if (typeof result?.cursor === "string") this.cursor = result.cursor;
       } catch (error) {
@@ -184,6 +193,23 @@ export class PingRoomAccountService {
   }
 
   private cursor: string | undefined;
+  private readonly failures = new Map<string, number>();
+
+  /**
+   * Count one failed delivery. Returns true while the batch should be fetched
+   * again (the cursor stays put; delivered Pings are deduped); once the budget
+   * is spent the Ping is dropped so it cannot hold back every later one.
+   */
+  private recordFailure(key: string): boolean {
+    const attempts = (this.failures.get(key) ?? 0) + 1;
+    if (attempts < MAX_HANDLER_ATTEMPTS) {
+      this.failures.set(key, attempts);
+      return true;
+    }
+    this.failures.delete(key);
+    this.deps.log.error(`giving up on ${key} after ${attempts} failed deliveries; later Pings continue`);
+    return false;
+  }
 
   private track(task: Promise<void>): void {
     this.tasks.add(task);
@@ -192,6 +218,8 @@ export class PingRoomAccountService {
 }
 
 const SEEN_TTL_MS = 24 * 60 * 60 * 1000;
+const MAX_HANDLER_ATTEMPTS = 3;
+const HANDLER_RETRY_DELAY_MS = 1000;
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
