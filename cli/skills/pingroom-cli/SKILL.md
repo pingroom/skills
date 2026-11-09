@@ -137,8 +137,12 @@ Rules that bite:
 - `-a <1-16>` attributes the ping to a quick-action slot (its icon + sound). Slots 5–16 exist only when the room owner has Pro and added those pages.
 - `--idempotency-key <key>` on `ping` takes the same rule as on `ask`. Retry
   with the same key and the server returns the first ping instead of sending
-  another; the same key with a changed request is a 409. It needs agent-token
-  mode: with `--webhook` it exits 2. Requires CLI ≥ 0.15.0.
+  another; the same key with a changed request is a 409
+  (`idempotency_conflict`). It works with `--webhook` too: the incoming-webhook
+  route replays a completed same-key request, and answers 409
+  `idempotency_in_progress` while the first one is still running, so retry with
+  the same key. Requires CLI ≥ 0.15.0; with `--webhook`, a CLI newer than 0.15.1
+  (0.15.x exits 2).
 
 ## Questions — block a script on a human choice
 
