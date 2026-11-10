@@ -197,7 +197,7 @@ export class PingRoomAccountService {
 
   /**
    * Count one failed delivery. Returns true while the batch should be fetched
-   * again (the cursor stays put; delivered Pings are deduped); once the budget
+   * again (the cursor stays put; delivered or dropped Pings are deduped); once the budget
    * is spent the Ping is dropped so it cannot hold back every later one.
    */
   private recordFailure(key: string): boolean {
@@ -207,6 +207,9 @@ export class PingRoomAccountService {
       return true;
     }
     this.failures.delete(key);
+    // Another failing Ping may keep this batch on the same cursor. Remember
+    // this terminal drop so that fetching it again cannot reset its budget.
+    this.seen.set(key, Date.now());
     this.deps.log.error(`giving up on ${key} after ${attempts} failed deliveries; later Pings continue`);
     return false;
   }

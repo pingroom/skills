@@ -5,8 +5,8 @@ import { PingRoomAccountService } from "../dist/service.js";
 const ping = (id) => ({ id, message: `message ${id}`, trigger_source: "manual" });
 
 /**
- * A service wired to a scripted long-poll: each entry answers one `wait`, and
- * once the script is spent `wait` hangs until the service stops.
+ * A service wired to a scripted or cursor-aware long-poll. Missing replies
+ * leave `wait` hanging until the service stops.
  */
 function harness(script, onPing) {
   const waits = [];
@@ -16,7 +16,7 @@ function harness(script, onPing) {
     notifications: {
       wait: (options) => {
         waits.push(options);
-        const next = script.shift();
+        const next = typeof script === "function" ? script(options, waits.length) : script.shift();
         if (next) return Promise.resolve(next);
         return new Promise((_, reject) => {
           options.signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
@@ -94,6 +94,41 @@ test("a Ping whose handler fails once is retried on the same cursor and delivere
     assert.deepEqual(delivered, ["B", "A"]);
     assert.equal(waits[1].after, undefined, "the cursor holds while a retry is owed");
     assert.equal(waits[2].after, "c1", "and moves once the batch is clean");
+  } finally {
+    await service.stop();
+  }
+});
+
+test("staggered failing Pings keep their exhausted retry budgets while another Ping holds the cursor", async () => {
+  const delivered = [];
+  const attempts = { A: 0, B: 0 };
+  const { service, waits, logs } = harness(
+    ({ after }, count) => {
+      if (count === 1) return { notifications: [], cursor: "c0" };
+      if (after === "cB") return { notifications: [ping("C")], cursor: "cC" };
+      if (after === "cC") return undefined;
+      assert.equal(after, "c0");
+      // B arrives after A's first failure, so its retry budget expires later.
+      return count === 2
+        ? { notifications: [ping("A")], cursor: "cA" }
+        : { notifications: [ping("A"), ping("B")], cursor: "cB" };
+    },
+    (id) => {
+      if (id === "A" || id === "B") {
+        attempts[id] += 1;
+        throw new Error("permanent handler failure");
+      }
+      delivered.push(id);
+    },
+  );
+  await service.start();
+  try {
+    await until(() => waits.at(-1).after === "cC");
+    assert.deepEqual(attempts, { A: 3, B: 3 });
+    assert.deepEqual(delivered, ["C"]);
+    assert.deepEqual(waits.map(({ after }) => after), [undefined, "c0", "c0", "c0", "c0", "cB", "cC"]);
+    assert.equal(logs.error.filter((message) => message.includes("giving up on ping:A")).length, 1);
+    assert.equal(logs.error.filter((message) => message.includes("giving up on ping:B")).length, 1);
   } finally {
     await service.stop();
   }
