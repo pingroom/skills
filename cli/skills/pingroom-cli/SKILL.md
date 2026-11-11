@@ -323,9 +323,41 @@ still gets them, and `--out -` sends them to stdout on purpose.
 `rooms create --location` need CLI ≥ 0.12.0; `ping --item` and
 `live start --duration-seconds` need CLI ≥ 0.13.0; `ask --poll` needs CLI
 ≥ 0.14.0; `ping --idempotency-key` needs CLI ≥ 0.15.0; `ping --tag`,
-`live start --tag` and `listen --tag` need a CLI newer than 0.16.0. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
+`live start --tag`, `listen --tag` and `metric` need a CLI newer than 0.16.0. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
 prints "unknown command" or "Unknown option", the installed binary is older
 than these docs (check which executable is on `PATH` before retrying).
+
+### Room metrics
+
+A **metric** is a named value that lives in a room (`mrr`, labelled "MRR",
+USD, 12400) for a phone widget to show. Setting one sends **no ping and no
+push**, so it is the right tool for a number that changes often. A room holds at
+most 8.
+
+```bash
+pingroom metric set CODE mrr 12400 --label MRR --format currency --unit USD
+pingroom metric set CODE mrr 12650                 # keeps the label, format and unit
+pingroom metric set CODE open-tickets 12           # a new metric: format number, label = key
+pingroom metric set CODE status "All clear" --label Status   # text, up to 24 chars
+pingroom metric set CODE delta -3.5                # a negative number is a value
+pingroom metric list CODE                          # key, label, value, when it last changed
+pingroom metric delete CODE mrr
+# Through a room's incoming webhook: no token, no room argument, no webhook cooldown.
+pingroom metric set --webhook-url "$PINGROOM_WEBHOOK_URL" mrr 12400 --label MRR
+```
+
+- `<key>` is 1–40 letters, digits, `-` or `_` (lowercased); `--label` is at most 24
+  characters; `--format` is `number`, `currency`, `percent`, `unit` or `text`.
+  `currency` needs `--unit` to be an ISO 4217 code (`USD`), `unit` needs a short
+  `--unit` such as `ms`; the other formats take none.
+- Send the **raw** value, never `"$12,400"`: the phone formats it for the reader.
+  A number is at most 1e15 and keeps four decimals; `percent` takes the
+  percentage itself (`12.5`). A word like `NaN` is refused unless you pass
+  `--format text`.
+- Repeating the stored value changes nothing and keeps its updated time.
+- Writing needs the connected account to own or administer the room (a member's
+  token can only `list`). `metrics_limit_reached` means the room has 8: `delete`
+  one. `feature_disabled` means the operator switched room metrics off.
 
 <!-- shared-body:end -->
 

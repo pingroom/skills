@@ -27,7 +27,7 @@ Tool names depend on how the server was added. A server added directly is
 `mcp__plugin_pingroom_mcp_pingroom__<name>`. Match whichever your session
 lists — this file names tools bare (`ask_question`, not the prefixed form).
 
-Read `references/tools.md` for the full 43-tool schema reference when you need
+Read `references/tools.md` for the full 46-tool schema reference when you need
 exact parameters. This file teaches you which tool to reach for and the rules
 that make the difference between "sent" and "landed".
 
@@ -364,6 +364,29 @@ every member instead of the slot's quick action. A non-owner gets
 `403 location_trigger_owner_only`; a room with no enabled location trigger gets
 `409 location_trigger_inactive`. Leave it at `manual` unless you are the owner.
 
+### Room metrics
+A metric is a named value that lives in a room (`mrr`, labelled "MRR", USD,
+12400) for a phone widget to show. Setting one sends **no ping and no push**,
+so it is the right tool for a number that changes often.
+`list_metrics { invite_code }` returns `{ metrics: [{ key, label, format, unit,
+value, value_updated_at }], limit: 8 }`. `set_metric { invite_code, key, value,
+label?, format?, unit? }` sets a value and creates the metric when the key is
+new (a room holds at most 8: `422 metrics_limit_reached`); `delete_metric
+{ invite_code, key }` removes one.
+- `key` is 1–40 characters of letters, digits, `-` and `_` (lowercased for
+  you); `label` is at most 24.
+- `format` is `number`, `currency`, `percent`, `unit` or `text`. `currency`
+  needs `unit` to be an ISO 4217 code (`USD`); `unit` needs a short unit such as
+  `ms`; the others take none. A new metric's format defaults to `number` for a
+  number and `text` for a string, its label to the key.
+- Send the raw value: a finite number (at most 1e15, four decimal places kept)
+  or, for `text`, a string of at most 24 characters. Never pre-format it
+  ("$12,400"); the phone does that for the reader's locale. `percent` takes the
+  percentage itself (`12.5`, not `0.125`).
+- Writing needs the human to own or administer the room (a member's agent can
+  only read). Repeating the stored value changes nothing, so its updated time
+  stays truthful.
+
 ### Reading the room
 - `connection_info` — verify the owner ID, agent handle, and home room; recover
   the stable latest-pings URL for this connection.
@@ -400,10 +423,11 @@ on the code, don't retry blindly:
 | `not_ping_owner` / `notification_not_found` | `replace_notification` only edits a ping this connection sent, in the room you named. Use the `id` `broadcast` returned. |
 | `replace_window_closed` / `replace_limit_reached` | The ping is 24 hours old or has been replaced 20 times. Send a new ping instead (with `replace_key`, the next send starts a new one by itself). |
 | `unsupported_room` / `unsupported_question` / `unsupported_handoff` / `unsupported_live_status` / `unsupported_claim` / `unsupported_ack` / `unsupported_checklist` / `unsupported_source` | That ping cannot be replaced: a public or personal room, a question, handoff, live card, "Who's on it?" request, a ping needing confirmation, one with a checklist, or one that is not an ordinary agent ping. Send a new ping. |
+| `metrics_limit_reached` / `metric_not_found` | A room holds at most 8 metrics: `delete_metric` one you no longer need, or reuse a key. `metric_not_found` is `delete_metric` for a key the room does not have (`list_metrics` shows the keys). |
 | `feature_disabled` | PingRoom turned that capability off (`feature` names it, e.g. `sending.questions`). Tell the human; don't retry. A ping carrying an attachment, link, location or checklist depends only on that extra's switch. |
 
 New MCP connections receive the single `pingroom:full` consent grant. It
-expands to 18 internal permissions, including permission to edit the robot's
+expands to 20 internal permissions, including permission to edit the robot's
 profile; it does not change the human's account profile. Room grants and
 account-tier limits still apply to every call.
 

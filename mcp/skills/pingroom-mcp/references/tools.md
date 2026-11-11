@@ -1,6 +1,6 @@
 # PingRoom MCP — complete tool reference
 
-Matches the public server registry in source (43 tools). To fetch the live
+Matches the public server registry in source (46 tools). To fetch the live
 catalog, POST `{"jsonrpc":"2.0","id":1,"method":"tools/list"}` to
 https://api.pingroom.io/api/agent/mcp. Every tool call is `tools/call`; in Claude Code the tools
 surface as `mcp__pingroom__<name>` when the server was added directly, or as
@@ -448,6 +448,30 @@ Configure several of a room's quick-action slots in one call. Prefer this over r
     - `sound` (string). Canonical sound id, e.g. "ting". Omit for the room default.
     - `requires_ack` (boolean). Whether pings from this action remain open until one eligible recipient acknowledges them.
     - `input_type` (string: `none` | `location` | `link` | `file` | `photo` | `pdf`). Detail every press must carry; omit to keep the stored value.
+
+## list_metrics  [RI]
+
+List the metrics kept in a room: named values (such as MRR or open tickets) a widget shows, each with its key, label, format, unit, current value and when the value last changed. Also returns the per-room limit. Returns `{metrics: [{key, label, format, unit, value, value_updated_at}], limit}`, oldest first.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+
+## set_metric  [DI]
+
+Set a room metric's value, creating the metric when the key is new (a room holds at most 8). Sends no ping and no push. Needs a room the account owns or administers. A value equal to the stored one changes nothing and keeps its updated time. A new metric's label defaults to the key and its format to number (for a number) or text (for a string); numbers keep four decimal places. Values are raw: clients format them for the reader. Returns the metric (`201` when it was created).
+
+  - `invite_code` (string) **(required)**. Room invite code.
+  - `key` (string) **(required)** — 1–40 chars, `^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$`. Metric key (from list_metrics): 1 to 40 characters, letters, digits, "-" and "_", starting with a letter or digit. Lowercased for you.
+  - `value` (number | string) **(required)** — ≤24 chars. The value: a finite number with an absolute value of at most 1e15 for the number, currency, percent and unit formats, or a string of at most 24 characters for the text format.
+  - `label` (string) — 1–24 chars. Name shown beside the value (at most 24 characters). Defaults to the key for a new metric.
+  - `format` (string: `number` | `currency` | `percent` | `unit` | `text`). How clients show the value: number, currency (needs unit: an ISO 4217 code), percent, unit (needs unit: free text such as ms) or text. Defaults to number or text by the value's type for a new metric.
+  - `unit` (string) — 1–8 chars. An ISO 4217 code such as USD for the currency format, short free text such as ms for the unit format. Not allowed for the other formats.
+
+## delete_metric  [DI]
+
+Delete a metric (by key) from a room the account owns or administers.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+  - `key` (string) **(required)** — 1–40 chars, `^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$`. Metric key (from list_metrics): 1 to 40 characters, letters, digits, "-" and "_", starting with a letter or digit. Lowercased for you.
 
 ## set_avatar  [DI]
 
