@@ -1,6 +1,6 @@
 # PingRoom MCP — complete tool reference
 
-Matches the public server registry in source (42 tools). To fetch the live
+Matches the public server registry in source (43 tools). To fetch the live
 catalog, POST `{"jsonrpc":"2.0","id":1,"method":"tools/list"}` to
 https://api.pingroom.io/api/agent/mcp. Every tool call is `tools/call`; in Claude Code the tools
 surface as `mcp__pingroom__<name>` when the server was added directly, or as
@@ -101,6 +101,17 @@ Send a custom ping to a room the account belongs to. Pass data.checklist.items t
   - `ack_mode` (string: `any` | `all`). With `requires_ack`, resolve on the first confirmation (default `any`) or wait for every original eligible recipient (`all`).
   - `ack_timeout_seconds` (integer) — 60–86400. Optional acknowledgement deadline in seconds.
   - `attachment_ids` (array) — ≤4 items. Ids of up to 4 uploaded attachments (see upload_attachment) to include. Uploading requires a Pro account.
+  - `replace_key` (string) — 1–64 chars, letters, digits and `. _ : -`. Your own handle for "the ping I keep updating". A send with a replace_key replaces your earlier ping with the same key in the same room, instead of sending a new one, while that ping is under 24 hours old, replaced fewer than 20 times and replaceable (see replace_notification); the answer is then 200 with the same id and `replaced: true`. Otherwise a new ping is sent and keeps the key. A send that asks for something a replacement cannot do (requires_ack, is_urgent, attachment_ids, tags, action_number, or a different correlation_id, reply_to or action_icon) always sends a new ping.
+
+## replace_notification  [DI]
+
+Replace the title, message and data of a ping you already sent, in place: the notification already on each recipient's phone changes silently (no second notification, no sound, unread counts unchanged) and the ping shows `edited_at`. Only for an ordinary ping you sent in this room, in a private room, less than 24 hours old and replaced fewer than 20 times; a question, handoff, live progress card, "Who's on it?" request, acknowledgement ping or checklist cannot be replaced (each refusal has its own code, e.g. `422 unsupported_ack`, `409 replace_window_closed`). Omit `title` or `data` to keep them, send `data: null` to clear it. Counts toward the same free-plan daily ping limit as a send. To update the same ping from a script that cannot keep its id, send `broadcast` with the same `replace_key` instead.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+  - `notification_id` (string, uuid) **(required)**. Id of the ping to replace (broadcast returns it as id). It must be a ping this credential sent.
+  - `message` (string) **(required)** — ≤160 chars. The new ping body text (max 120 characters in private rooms).
+  - `title` (string or null) — ≤40 chars. The new headline. Omit to keep the current one; an empty value clears it.
+  - `data` (object or null). The new structured data, replacing the old (same rules as broadcast, minus `data.checklist`). Omit to keep the current data; null clears it.
 
 ## live_status  [DI]
 

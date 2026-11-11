@@ -246,6 +246,8 @@ pingroom ping -m "Weekly report" --attach report.md --attach data.zip
 pingroom ping -m "build 512 done" -d '{"commit":"abc123","branch":"main"}'
 pingroom ping -m "Deploy finished" --idempotency-key "deploy-512"   # a retry replays, never repeats
 pingroom ping -m "Deploy finished" --tag deploy --tag prod          # label it; find it with listen --tag
+pingroom ping -m "Build 41: green" --replace "$PING_ID"             # edit a ping you sent, in place, silently
+pingroom ping -m "Build 41: running" --replace-key build-41         # send it, or edit the earlier ping with this key
 ```
 
 Rules that bite:
@@ -264,6 +266,27 @@ Rules that bite:
   it later. A tag is 1–32 characters of lowercase letters, digits, `-` and `_`,
   starting with a letter or digit; the CLI trims, lowercases and de-duplicates
   them and refuses a bad one before sending. It works with a token or a webhook.
+- `--replace <ping-id>` changes a ping you already sent (agent-token mode only)
+  instead of sending another: its message, `--title` and data change in place on
+  every recipient's phone, silently (no second notification, no sound, unread
+  counts unchanged). The id is the `id` a send returns (`--json`), or the one
+  `pingroom listen` prints. `--title` and the data flags (`--data`, `--url`,
+  `--location`) are kept unless you pass them; `--title ''` clears the title and
+  a data flag replaces the data as a whole. Only an ordinary ping you sent in a
+  private room, under 24 hours old and replaced fewer than 20 times can be
+  replaced (each refusal has its own code, see Troubleshooting). It is a usage
+  error with `--replace-key`, `--action`, `--urgent`, `--require-ack`,
+  `--ack-mode`, `--ack-timeout`, `--attach`, `--tag`, `--item` or
+  `--idempotency-key`. It counts like a send against a free account's daily
+  allowance. Requires a CLI newer than 0.16.0.
+- `--replace-key <key>` (1–64 characters: letters, digits, `.` `_` `:` `-`) is
+  for a script that cannot keep the id: with a token or a webhook, a send
+  carrying the key replaces your earlier ping with the same key in that room
+  (same token, or same webhook) while that ping is under 24 hours old and still
+  replaceable, and prints `ping replaced`; otherwise it sends a new ping that
+  keeps the key. A send that asks for something a replacement cannot do
+  (`--require-ack`, `--urgent`, `--attach`, `--tag`, `--action`) always sends a
+  new ping. Requires a CLI newer than 0.16.0.
 - `-a <1-16>` attributes the ping to a quick-action slot (its icon + sound). Slots 5–16 exist only when the room owner has Pro and added those pages.
 - `--idempotency-key <key>` on `ping` takes the same rule as on `ask`. Retry
   with the same key and the server returns the first ping instead of sending
@@ -477,6 +500,15 @@ not need a shorter TTL. Two rules:
   it with `actions set` or choose another slot.
 - `409 quick_action_layout_changed` — the pages moved since they were read;
   re-run `pingroom actions list` and retry.
+- `--replace` refused — `403 not_ping_owner` / `404 notification_not_found`: only
+  the token that sent a ping can replace it, in the room you named.
+  `409 replace_window_closed` / `409 replace_limit_reached`: the ping is 24
+  hours old or already replaced 20 times; send a new ping (with `--replace-key`
+  the next send starts one by itself). `422 unsupported_room`,
+  `unsupported_question`, `unsupported_handoff`, `unsupported_live_status`,
+  `unsupported_claim`, `unsupported_ack`, `unsupported_checklist`,
+  `unsupported_source`: that ping cannot be replaced. A bare 404 with no code
+  means the server has not switched replacing on yet.
 - `413 payload_too_large` — attachments are 5 MiB each, at most 4 per ping.
 - `pingroom logout` only clears the local file; the server-side credential stays
   live. Revoke it under Connected Agents, or let the labeled pairing command do it.

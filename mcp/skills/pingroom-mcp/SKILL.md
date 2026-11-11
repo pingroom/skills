@@ -27,7 +27,7 @@ Tool names depend on how the server was added. A server added directly is
 `mcp__plugin_pingroom_mcp_pingroom__<name>`. Match whichever your session
 lists — this file names tools bare (`ask_question`, not the prefixed form).
 
-Read `references/tools.md` for the full 42-tool schema reference when you need
+Read `references/tools.md` for the full 43-tool schema reference when you need
 exact parameters. This file teaches you which tool to reach for and the rules
 that make the difference between "sent" and "landed".
 
@@ -158,6 +158,33 @@ Free accounts own at most five rooms (`402 room_limit_reached`).
 `broadcast { invite_code, message, title?, action_icon? }`. Keep the message an
 event, not prose: *what happened, what to do, is it done*. Set a `title` only
 when the room name alone wouldn't orient the reader.
+
+### Update a ping in place
+A ping you already sent can change its text without a second buzz.
+`replace_notification { invite_code, notification_id, message, title?, data? }`
+swaps the notification already on each recipient's phone for the new one,
+silently: no second notification, no sound, unread counts unchanged, and the
+ping reads back with `edited_at`. `notification_id` is the `id` `broadcast`
+returned, and it must be a ping *this* connection sent. Omit `title` or `data`
+to keep them; `data: null` clears the data; the same text again is a harmless
+no-op. Good for "Build 41: running" → "Build 41: green" instead of two pings.
+
+When you cannot keep the id (a script, a restarted run), send `broadcast` with
+a `replace_key` (1–64 characters: letters, digits, `.` `_` `:` `-`) on every
+update: a send with the key replaces your earlier ping with the same key in that
+room and answers `replaced: true` with the same `id`; if that ping can no longer
+be replaced it sends a new one that keeps the key. A send that asks for
+something a replacement cannot do (`requires_ack`, `is_urgent`,
+`attachment_ids`, `tags`, `action_number`, or a different `correlation_id`,
+`reply_to` or `action_icon`) always sends a new ping.
+
+Only an ordinary ping you sent in a private room, under 24 hours old and
+replaced fewer than 20 times can be replaced. A question, handoff, live progress
+card, "Who's on it?" request, a ping that needs a confirmation, or one with a
+checklist cannot (each refusal has its own code, below). A replacement counts
+like a send against a free account's daily allowance. If the server has not
+switched replacing on yet, `replace_notification` answers a plain 404 with no
+code and a `replace_key` is stored and ignored: send a new ping instead.
 
 ### Urgent / must-be-confirmed
 - `is_urgent: true` breaks through Focus/Do Not Disturb and through room and member mutes (never a block). Delivery-only — it
@@ -370,6 +397,9 @@ on the code, don't retry blindly:
 | `validation_failed` | Read the message; commonly a public room with no other member, an unsupported room type, or a length cap. |
 | `free_limit_reached` / HTTP 402 | A free account used its daily allowance. Honour `retry_after`, which can be hours away, or tell the human they can upgrade to Pro. Don't loop on it. |
 | `rate_limited` / HTTP 429 | Back off; respect `retry_after` / Retry-After. Never hot-loop a wait tool — they long-poll server-side already. |
+| `not_ping_owner` / `notification_not_found` | `replace_notification` only edits a ping this connection sent, in the room you named. Use the `id` `broadcast` returned. |
+| `replace_window_closed` / `replace_limit_reached` | The ping is 24 hours old or has been replaced 20 times. Send a new ping instead (with `replace_key`, the next send starts a new one by itself). |
+| `unsupported_room` / `unsupported_question` / `unsupported_handoff` / `unsupported_live_status` / `unsupported_claim` / `unsupported_ack` / `unsupported_checklist` / `unsupported_source` | That ping cannot be replaced: a public or personal room, a question, handoff, live card, "Who's on it?" request, a ping needing confirmation, one with a checklist, or one that is not an ordinary agent ping. Send a new ping. |
 | `feature_disabled` | PingRoom turned that capability off (`feature` names it, e.g. `sending.questions`). Tell the human; don't retry. A ping carrying an attachment, link, location or checklist depends only on that extra's switch. |
 
 New MCP connections receive the single `pingroom:full` consent grant. It
