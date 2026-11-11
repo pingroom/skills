@@ -257,6 +257,49 @@ message is the list's title:
 caption. Use for dashboards, PRs, docs — anything better opened than read in
 120 chars.
 
+### Buttons on a ping
+`data.actions` puts up to 3 buttons on the notification's long-press actions and
+on the ping's card (`broadcast` only; never on a question, handoff, approval,
+live card or `replace_notification`):
+
+```json
+{"invite_code": "...", "message": "Disk 91% on db-2", "data": {"actions": [
+  {"label": "Open dashboard", "type": "open_url", "url": "https://grafana.example.com/d/disk"},
+  {"id": "clean", "label": "Clean up now", "type": "webhook",
+   "url": "https://ops.example.com/cleanup", "body": {"host": "db-2"}, "style": "danger"}
+]}}
+```
+
+- `open_url` opens an https page; the app shows its host under the label.
+- `webhook` never makes the phone call your URL: a tap calls PingRoom, which
+  POSTs a signed `notification.action` event there (once per person, for 24
+  hours; the room owner must be on Pro). Nobody sees the URL or `body`.
+- `id` is `[a-z0-9_-]{1,24}` (default `a1`..`a3`), `style` is `default`,
+  `primary` or `danger`, `body` (webhook only) is a JSON object of ≤ 10 keys and
+  1 KB.
+- A label is 1–26 characters with no line breaks or invisible formatting
+  characters, nothing shaped like a web address, domain or IP (`paypal.com`),
+  and never one of PingRoom's own buttons (Pong back, Mute room, Confirm, the
+  claim buttons) in any language. A URL is `https://` on a public hostname: no
+  user name or password, no IP, `localhost` or internal name, punycode for a
+  non-ASCII domain, no port on a webhook button.
+- Not in public or personal rooms, not with `requires_ack`, and a ping with
+  buttons cannot be replaced (`unsupported_actions`); it can still be withdrawn.
+- The `broadcast` answer carries `action_signing_secret` when a button is a
+  webhook: the ping's own secret, never returned again by any read. Hand it to
+  the server behind the URL. It verifies each delivery exactly like an outgoing
+  webhook (`X-PingRoom-Signature-V2` = HMAC-SHA256 over
+  `v2\n{X-PingRoom-Timestamp}\n{X-PingRoom-Delivery}\n{raw body}`, refuse a
+  timestamp over 5 minutes off, run each delivery id once), looking the secret
+  up by the body's `notification_id`.
+- The body names who tapped only by `actor.id` (a pseudonym, different in every
+  room) and `actor.display_name`; it also carries `action_id`, `room`,
+  `correlation_id`, your `body` and `timestamp`.
+- Reads (`get_notification`, `list_notifications`) return `actions` (each
+  button's `id`, `label`, `type`, `style`, plus `url` and `host` for a link; a
+  webhook button never shows where it goes) and `actions_expire_at`. The stored
+  `data` never holds `actions`.
+
 ### Structured data + threading
 `data` carries up to 25 keys / 8 KB of machine-readable context on every send
 primitive — build numbers, commit SHAs, error codes. Never put secrets in it.
@@ -456,6 +499,8 @@ on the code, don't retry blindly:
 | `not_ping_owner` / `notification_not_found` | `replace_notification` only edits a ping this connection sent, in the room you named. Use the `id` `broadcast` returned. |
 | `replace_window_closed` / `replace_limit_reached` | The ping is 24 hours old or has been replaced 20 times. Send a new ping instead (with `replace_key`, the next send starts a new one by itself). |
 | `unsupported_room` / `unsupported_question` / `unsupported_handoff` / `unsupported_live_status` / `unsupported_claim` / `unsupported_ack` / `unsupported_checklist` / `unsupported_source` | That ping cannot be replaced or withdrawn: a public or personal room, a question, handoff, live card, "Who's on it?" request, a ping needing confirmation, one with a checklist, or one that is not an ordinary agent ping. Send a new ping. |
+| `unsupported_actions` | `replace_notification` on a ping with buttons: they and the text around them stay as sent. Send a new ping (or withdraw this one). |
+| `ping_buttons_unsupported_room` / `ping_buttons_with_ack` / `ping_buttons_require_pro` | `data.actions` refused: buttons never go to a public or personal room, never with `requires_ack`, and a webhook button needs the room owner on Pro (say so; don't loop). A bad label, URL or body is a `validation_failed` naming the field (`data.actions.0.label`). |
 | `ping_withdrawn` / `withdraw_window_closed` | `ping_withdrawn`: the ping was taken back, so `replace_notification` refuses it; send a new ping. `withdraw_window_closed`: the ping is 24 hours old, too late to take back. |
 | `metrics_limit_reached` / `metric_not_found` | A room holds at most 8 metrics: `delete_metric` one you no longer need, or reuse a key. `metric_not_found` is `delete_metric` for a key the room does not have (`list_metrics` shows the keys). |
 | `feature_disabled` | PingRoom turned that capability off (`feature` names it, e.g. `sending.questions`). Tell the human; don't retry. A ping carrying an attachment, link, location or checklist depends only on that extra's switch. |

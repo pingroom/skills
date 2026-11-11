@@ -240,6 +240,10 @@ pingroom ping -m "Review the PR" --url https://github.com/o/r/pull/7 \
 pingroom ping -m "Meet here" --location 48.8584,2.2945 \
               --location-label "Eiffel Tower"                     # map ping
 pingroom ping -m "Groceries" --item Milk --item Eggs --item Bread   # checklist the room ticks off
+pingroom ping -m "Disk 91% on db-2" \
+  --action-url "Open dashboard=https://grafana.example.com/d/disk" \
+  --action-webhook "Clean up now=https://ops.example.com/cleanup" \
+  --action-body '{"host":"db-2"}'                                  # up to 3 buttons on the ping
 pingroom ping -m "Alarm!" --urgent                                # breaks Focus and mutes
 pingroom ping -m "Confirm receipt" --require-ack --ack-mode all --ack-timeout 600
 pingroom ping -m "Weekly report" --attach report.md --attach data.zip
@@ -303,6 +307,34 @@ Rules that bite:
   next opens the app, and only recent builds of the iPhone and Android apps
   remove it. Requires a CLI newer than 0.16.0.
 - `-a <1-16>` attributes the ping to a quick-action slot (its icon + sound). Slots 5–16 exist only when the room owner has Pro and added those pages.
+- Buttons (up to 3, token or webhook): `--action-url "Label=https://…"` opens a
+  link (the app shows its host under the label); `--action-webhook
+  "Label=https://…"` makes PingRoom POST a signed `notification.action` event to
+  your URL when a recipient taps it, once per person, for 24 hours, and needs the
+  ROOM OWNER on Pro. The phone never calls the URL, and nobody sees it or the
+  body. Both flags repeat; `--action-url` buttons come first, then
+  `--action-webhook` ones, with ids `a1`..`a3`. `--action-body '<json>'` (a JSON
+  object, ≤ 10 keys, ≤ 1 KB) is the `body` your URL receives: give it once per
+  `--action-webhook`, paired in order, or not at all. For your own ids, a style
+  (`primary`, `danger`) or another order, send `data.actions` in `--data`
+  instead (not both). The CLI refuses before sending what the server refuses: a
+  label over 26 characters, with line breaks or invisible formatting
+  characters, shaped like a web address, domain or IP (`paypal.com`), or equal
+  to one of PingRoom's own buttons (Pong back, Mute room, Confirm, the claim
+  buttons) in any language; a URL that is not `https://`, has a user name or
+  password, an IP address, `localhost` or an internal name, a non-ASCII host
+  (give punycode), or a port on a webhook button. Not in public or personal
+  rooms, not with `--require-ack`, never with `--replace` (a ping with buttons
+  cannot be replaced), and `ask`, `handoff` and `live` refuse `data.actions`.
+  With a webhook button the output prints `Button signing secret: <hex>` (in
+  `--json`, `action_signing_secret`): the ping's own secret, returned only by
+  the send. Verify each delivery with it exactly like an outgoing webhook
+  (`X-PingRoom-Signature-V2` over `v2\n{timestamp}\n{delivery}\n{raw body}`,
+  reject a timestamp more than 5 minutes off, run each `X-PingRoom-Delivery`
+  once). Look the secret up by the body's `notification_id`, which is only a
+  lookup key until the signature checks out. The body names who tapped only by
+  `actor.id` (a pseudonym, different in every room) and `actor.display_name`.
+  Requires a CLI newer than 0.16.0.
 - `--idempotency-key <key>` on `ping` takes the same rule as on `ask`. Retry
   with the same key and the server returns the first ping instead of sending
   another; the same key with a changed request is a 409

@@ -93,6 +93,13 @@ Send a custom ping to a room the account belongs to. Pass data.checklist.items t
     - `data.url` (string). Reserved: an absolute http:// or https:// URL. Present turns the ping into a tappable link.
     - `data.button_label` (string). Reserved: label for the link button rendered for data.url.
     - `data.label` (string). Reserved: short caption shown with the link ping.
+    - `data.actions` (array) — 1–3 items. Reserved: up to 3 buttons on the notification and the ping's card. open_url opens an https link (the app shows its host); webhook makes PingRoom POST a signed notification.action event to your https URL when a recipient taps it (once per person, for 24 hours; the room owner must be Pro). Not in public or personal rooms, not with requires_ack. The answer carries `action_signing_secret` to verify deliveries with. A label may not contain a web address or domain, or copy one of PingRoom's own buttons.
+      - `data.actions[].id` (string) — `[a-z0-9_-]{1,24}`. Your id for the button, unique on the ping; defaults to a1, a2, a3.
+      - `data.actions[].label` (string) **(required)** — 1–26 chars. Button text.
+      - `data.actions[].type` (string: `open_url` | `webhook`) **(required)**.
+      - `data.actions[].url` (string) **(required)** — ≤2048 chars, `https://`. https only, a public hostname (punycode for an internationalized one), no user name or password. A webhook URL takes no port.
+      - `data.actions[].style` (string: `default` | `primary` | `danger`).
+      - `data.actions[].body` (object) — ≤10 keys. webhook only: a JSON object (at most 1024 bytes) echoed back to your URL as `body` on every tap. Never shown to recipients.
   - `correlation_id` (string) — ≤255 chars. Your own id, echoed back unchanged on read.
   - `tags` (array) — ≤10 items. Up to 10 labels to file this ping under, so history can later be filtered by one (list_notifications and wait_for_notification take a tag). Each is 1 to 32 characters: lowercase letters, digits, "-" and "_", starting with a letter or digit. Trimmed, lowercased and de-duplicated for you.
   - `reply_to` (string) — ≤255 chars. Id of the ping this one answers (notification id or correlation id).
@@ -111,7 +118,7 @@ Replace the title, message and data of a ping you already sent, in place: the no
   - `notification_id` (string, uuid) **(required)**. Id of the ping to replace (broadcast returns it as id). It must be a ping this credential sent.
   - `message` (string) **(required)** — ≤160 chars. The new ping body text (max 120 characters in private rooms).
   - `title` (string or null) — ≤40 chars. The new headline. Omit to keep the current one; an empty value clears it.
-  - `data` (object or null). The new structured data, replacing the old (same rules as broadcast, minus `data.checklist`). Omit to keep the current data; null clears it.
+  - `data` (object or null). The new structured data, replacing the old (same rules as broadcast, minus `data.checklist` and `data.actions`: a replacement never adds, changes or removes buttons, and a ping with buttons cannot be replaced, `422 unsupported_actions`). Omit to keep the current data; null clears it.
 
 ## withdraw_notification  [DI]
 
