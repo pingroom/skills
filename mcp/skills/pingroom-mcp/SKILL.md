@@ -315,8 +315,9 @@ For work longer than ~30 seconds, run a live card instead of spamming pings:
 
 1. First `live_status` call with a **new** `correlation_id` starts the stream
    (one alert). Choose the shape up front — `steps` (labels are immutable after
-   the first ping), `progress` 0..1, `metrics`, `deadline_at`, or a matchup —
-   the template is fixed at creation.
+   the first ping), `progress` 0..1 (optionally in `segments`), `metrics`,
+   `deadline_at`, a matchup, a `timer`, one `value` or `stats` — the template is
+   fixed at creation.
 2. Further calls with the **same** `correlation_id` and `state: "running"`
    update the card silently (`current_step`, `progress`, `message`, `eta_at`).
 3. End with `state: "done"` or `"failed"` — one completion alert. **Always end
@@ -331,6 +332,19 @@ For work longer than ~30 seconds, run a live card instead of spamming pings:
    constraint and send ONE ordinary ping when the work finishes.
 
 `get_live_status { invite_code, correlation_id }` reads the current frame.
+
+Three more layouts, all through `live_status`. `template: "timer"` counts up
+from `started_at` (epoch seconds, default now, fixed after the first ping); the
+phone keeps the clock, so send no per-second pings, but update at least every 15
+minutes or the stream is ended as stale, and `done`/`failed` freezes it at the
+final elapsed time. `template: "value"` shows one prominent `value` (required,
+≤24 characters) with an optional `value_label`, `delta` (≤12) and `trend`
+(`up`, `down`, `flat`). `template: "stats"` shows 4 to 8 `{label, value}` pairs
+in `stats` (required on the first ping; later pings may change them or omit the
+field). `progress` with `segments` (2–20, fixed once set) and `current_segment`
+draws equal segments, and the server derives `progress` when you omit it. An
+older app shows the status layout with the server-written `message`: for `value`
+and `stats` the server writes one when you send none.
 
 **Who's on it?** A `live_status` stream with `template: "claim"` asks a private
 room who will take a task. Put the request in `title` (1–120 characters) and add

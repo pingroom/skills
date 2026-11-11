@@ -366,10 +366,15 @@ pingroom live update --room CODE -c "$CID" --step 1 -m "Migrating"
 pingroom live end --room CODE -c "$CID" -m "All green"   # ends as done; --failed to fail
 ```
 
-Templates: status · steps · progress (`--progress 0..1`) · metrics
+Templates: status · steps · progress (`--progress 0..1`, or `--segments 2-20`
+on start with `--segment n` to draw equal segments) · metrics
 (`--metric label:value` ×3) · countdown (`--deadline-at epoch`,
 optional `--duration-seconds n` on start) · decision
-(`--prompt`, `--option v:label` ×4) · matchup (`--left`/`--right`/`--center`).
+(`--prompt`, `--option v:label` ×4) · matchup (`--left`/`--right`/`--center`) ·
+timer (counts up from `--started-at epoch`, default now; update at least every
+15 minutes or it is ended as stale) · value (`--value`, `--value-label`,
+`--delta`, `--trend up|down|flat`) · stats (`--stat "Label=Value"` ×4–8).
+An older app shows the status layout with the server-written message.
 The template is fixed at start, and so are its `--tag` labels (`live start
 --tag deploy`; a later `update` or `end` refuses `--tag`); one stream per
 correlation id; **always end
@@ -448,7 +453,7 @@ still gets them, and `--out -` sends them to stdout on purpose.
 `rooms create --location` need CLI ≥ 0.12.0; `ping --item` and
 `live start --duration-seconds` need CLI ≥ 0.13.0; `ask --poll` needs CLI
 ≥ 0.14.0; `ping --idempotency-key` needs CLI ≥ 0.15.0; `ping --tag`,
-`live start --tag`, `listen --tag` and `metric` need a CLI newer than 0.16.0. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
+`live start --tag`, the `timer`, `value` and `stats` templates, `live --segments`, `listen --tag` and `metric` need a CLI newer than 0.16.0. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
 prints "unknown command" or "Unknown option", the installed binary is older
 than these docs (check which executable is on `PATH` before retrying).
 
