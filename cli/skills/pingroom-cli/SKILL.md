@@ -123,6 +123,7 @@ pingroom ping -m "Deploy finished" --idempotency-key "deploy-512"   # a retry re
 pingroom ping -m "Deploy finished" --tag deploy --tag prod          # label it; find it with listen --tag
 pingroom ping -m "Build 41: green" --replace "$PING_ID"             # edit a ping you sent, in place, silently
 pingroom ping -m "Build 41: running" --replace-key build-41         # send it, or edit the earlier ping with this key
+pingroom ping --withdraw "$PING_ID"                                 # take a ping you sent back off the phones
 ```
 
 Rules that bite:
@@ -162,6 +163,20 @@ Rules that bite:
   keeps the key. A send that asks for something a replacement cannot do
   (`--require-ack`, `--urgent`, `--attach`, `--tag`, `--action`) always sends a
   new ping. Requires a CLI newer than 0.16.0.
+- `--withdraw <ping-id>` takes back a ping you already sent (agent-token mode
+  only, with `--room`; no `--message`): its notification is removed from each
+  recipient's Lock Screen and Notification Center, and the ping stays in the room
+  history with its text, marked withdrawn. Unread counts do not change, it prints
+  `ping withdrawn`, and withdrawing twice is a no-op. The id is the `id` a send
+  returns (`--json`), or the one `pingroom listen` prints. The same pings can be
+  withdrawn as can be replaced: an ordinary ping you sent in a private room,
+  under 24 hours old. It is a usage error with any other ping option, and it does
+  not count against a free account's daily allowance. A withdrawn ping can no
+  longer be replaced (`--replace` fails with `ping_withdrawn`; `--replace-key`
+  starts a new ping). Removal is best effort: a phone that is offline, has the app
+  force-quit or restricts background activity keeps the notification until it
+  next opens the app, and only recent builds of the iPhone and Android apps
+  remove it. Requires a CLI newer than 0.16.0.
 - `-a <1-16>` attributes the ping to a quick-action slot (its icon + sound). Slots 5–16 exist only when the room owner has Pro and added those pages.
 - `--idempotency-key <key>` on `ping` takes the same rule as on `ask`. Retry
   with the same key and the server returns the first ping instead of sending
@@ -435,7 +450,11 @@ that, or `--dir <path>` to install somewhere else. Requires CLI >= 0.8.0.
   `unsupported_checklist`, `unsupported_source`: that ping cannot be replaced
   (public or personal room, question, handoff, live card, "Who's on it?"
   request, a ping needing confirmation, one with a checklist). A bare 404 with
-  no code means the server has not switched replacing on yet.
+  no code means the server has not switched replacing on yet. `ping_withdrawn`:
+  the ping was taken back with `--withdraw`; send a new one.
+- `--withdraw` refused → the same codes as `--replace`, except the window is
+  `withdraw_window_closed` (24 hours). A bare 404 with no code means the server
+  has not switched withdrawing on yet.
 - `payload_too_large` (HTTP 413) → the request body exceeded the server limit:
   attachments are 5 MiB each and at most 4 per ping. `--data` is capped at
   8 KB as the server measures the JSON (each non-ASCII UTF-16 code unit counts

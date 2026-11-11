@@ -27,7 +27,7 @@ Tool names depend on how the server was added. A server added directly is
 `mcp__plugin_pingroom_mcp_pingroom__<name>`. Match whichever your session
 lists — this file names tools bare (`ask_question`, not the prefixed form).
 
-Read `references/tools.md` for the full 46-tool schema reference when you need
+Read `references/tools.md` for the full 47-tool schema reference when you need
 exact parameters. This file teaches you which tool to reach for and the rules
 that make the difference between "sent" and "landed".
 
@@ -185,6 +185,25 @@ checklist cannot (each refusal has its own code, below). A replacement counts
 like a send against a free account's daily allowance. If the server has not
 switched replacing on yet, `replace_notification` answers a plain 404 with no
 code and a `replace_key` is stored and ignored: send a new ping instead.
+
+### Take a ping back
+`withdraw_notification { invite_code, notification_id }` removes a ping's
+notification from each recipient's Lock Screen and Notification Center, for when
+a ping was wrong or is no longer true ("Deploying prod" when you cancelled it).
+The ping stays in the room's history with its text and `withdrawn_at` set, and
+unread counts do not change. `notification_id` is the `id` `broadcast` returned,
+and it must be a ping *this* connection sent. The same pings can be withdrawn as
+can be replaced: an ordinary ping you sent in a private room, under 24 hours old.
+Withdrawing twice is a harmless no-op, and it does not count against a free
+account's daily allowance. A withdrawn ping can no longer be replaced
+(`replace_notification` answers `409 ping_withdrawn`, and a `broadcast` with that
+ping's `replace_key` sends a new one).
+
+Removal is best effort, so never rely on it for something that must not be seen:
+a phone that is offline, has the app force-quit or restricts background activity
+keeps the notification until it next opens the app, and only recent builds of the
+iPhone and Android apps remove it. If the server has not switched withdrawing on
+yet, `withdraw_notification` answers a plain 404 with no code.
 
 ### Urgent / must-be-confirmed
 - `is_urgent: true` breaks through Focus/Do Not Disturb and through room and member mutes (never a block). Delivery-only — it
@@ -436,7 +455,8 @@ on the code, don't retry blindly:
 | `rate_limited` / HTTP 429 | Back off; respect `retry_after` / Retry-After. Never hot-loop a wait tool — they long-poll server-side already. |
 | `not_ping_owner` / `notification_not_found` | `replace_notification` only edits a ping this connection sent, in the room you named. Use the `id` `broadcast` returned. |
 | `replace_window_closed` / `replace_limit_reached` | The ping is 24 hours old or has been replaced 20 times. Send a new ping instead (with `replace_key`, the next send starts a new one by itself). |
-| `unsupported_room` / `unsupported_question` / `unsupported_handoff` / `unsupported_live_status` / `unsupported_claim` / `unsupported_ack` / `unsupported_checklist` / `unsupported_source` | That ping cannot be replaced: a public or personal room, a question, handoff, live card, "Who's on it?" request, a ping needing confirmation, one with a checklist, or one that is not an ordinary agent ping. Send a new ping. |
+| `unsupported_room` / `unsupported_question` / `unsupported_handoff` / `unsupported_live_status` / `unsupported_claim` / `unsupported_ack` / `unsupported_checklist` / `unsupported_source` | That ping cannot be replaced or withdrawn: a public or personal room, a question, handoff, live card, "Who's on it?" request, a ping needing confirmation, one with a checklist, or one that is not an ordinary agent ping. Send a new ping. |
+| `ping_withdrawn` / `withdraw_window_closed` | `ping_withdrawn`: the ping was taken back, so `replace_notification` refuses it; send a new ping. `withdraw_window_closed`: the ping is 24 hours old, too late to take back. |
 | `metrics_limit_reached` / `metric_not_found` | A room holds at most 8 metrics: `delete_metric` one you no longer need, or reuse a key. `metric_not_found` is `delete_metric` for a key the room does not have (`list_metrics` shows the keys). |
 | `feature_disabled` | PingRoom turned that capability off (`feature` names it, e.g. `sending.questions`). Tell the human; don't retry. A ping carrying an attachment, link, location or checklist depends only on that extra's switch. |
 

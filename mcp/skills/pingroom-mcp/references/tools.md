@@ -1,6 +1,6 @@
 # PingRoom MCP — complete tool reference
 
-Matches the public server registry in source (46 tools). To fetch the live
+Matches the public server registry in source (47 tools). To fetch the live
 catalog, POST `{"jsonrpc":"2.0","id":1,"method":"tools/list"}` to
 https://api.pingroom.io/api/agent/mcp. Every tool call is `tools/call`; in Claude Code the tools
 surface as `mcp__pingroom__<name>` when the server was added directly, or as
@@ -112,6 +112,13 @@ Replace the title, message and data of a ping you already sent, in place: the no
   - `message` (string) **(required)** — ≤160 chars. The new ping body text (max 120 characters in private rooms).
   - `title` (string or null) — ≤40 chars. The new headline. Omit to keep the current one; an empty value clears it.
   - `data` (object or null). The new structured data, replacing the old (same rules as broadcast, minus `data.checklist`). Omit to keep the current data; null clears it.
+
+## withdraw_notification  [DI]
+
+Take back a ping you already sent: its notification is removed from each recipient's Lock Screen and Notification Center, and the ping stays in the room's history with its text and `withdrawn_at` set. Unread counts do not change. Only for an ordinary ping you sent in this room, in a private room, less than 24 hours old; a question, handoff, live progress card, "Who's on it?" request, acknowledgement ping or checklist cannot be withdrawn (each refusal has its own code, e.g. `422 unsupported_ack`, `409 withdraw_window_closed`). A withdrawn ping can no longer be replaced (`409 ping_withdrawn`). Taking back a ping already withdrawn is a harmless no-op. Removal is best effort: a phone that is offline, has the app force-quit or restricts background activity keeps the notification until it next opens the app. Does not count toward the free-plan daily ping limit.
+
+  - `invite_code` (string) **(required)**. Room invite code.
+  - `notification_id` (string, uuid) **(required)**. Id of the ping to take back (broadcast returns it as id). It must be a ping this credential sent.
 
 ## live_status  [DI]
 
