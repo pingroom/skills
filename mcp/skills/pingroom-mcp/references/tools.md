@@ -94,6 +94,7 @@ Send a custom ping to a room the account belongs to. Pass data.checklist.items t
     - `data.button_label` (string). Reserved: label for the link button rendered for data.url.
     - `data.label` (string). Reserved: short caption shown with the link ping.
   - `correlation_id` (string) — ≤255 chars. Your own id, echoed back unchanged on read.
+  - `tags` (array) — ≤10 items. Up to 10 labels to file this ping under, so history can later be filtered by one (list_notifications and wait_for_notification take a tag). Each is 1 to 32 characters: lowercase letters, digits, "-" and "_", starting with a letter or digit. Trimmed, lowercased and de-duplicated for you.
   - `reply_to` (string) — ≤255 chars. Id of the ping this one answers (notification id or correlation id).
   - `is_urgent` (boolean). Deliver time-sensitive so the ping breaks through Focus / Do Not Disturb and reaches members who muted the room or you (a block still wins). Independent of requires_ack: urgent affects delivery only and asks nothing of the recipient.
   - `requires_ack` (boolean). Keep this ping open until its confirmation rule is met, and show it as a lock-screen card with an Acknowledge button. Does not raise the interruption level on its own — combine with is_urgent for an ack that also breaks through Focus.
@@ -107,6 +108,7 @@ Start, update, or end a live progress card on the room members' lock screen (an 
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `correlation_id` (string) **(required)** — ≤255 chars. The stream key. Reuse it on every ping of the same stream.
+  - `tags` (array) — ≤10 items. Up to 10 labels to file this ping under, so history can later be filtered by one (list_notifications and wait_for_notification take a tag). Each is 1 to 32 characters: lowercase letters, digits, "-" and "_", starting with a letter or digit. Trimmed, lowercased and de-duplicated for you. Set by the ping that starts the stream; later pings of the same stream may repeat or omit them and never change them.
   - `live_status` (object) **(required)**. The live card's state. Only state is required.
     - `live_status.state` (string) **(required)**. running keeps the card live; done/failed end it with one completion alert.
     - `live_status.template` (string). Which layout the OS renders. Fixed at stream creation. "claim" is a "Who's on it?" request one member takes on (private rooms only): its text is title (or message), up to 120 characters, an optional deadline_at is at most 8 hours away, and it then moves only through live_claim, or a done/failed ping from you that finishes or cancels it.
@@ -161,6 +163,8 @@ List the room-icon catalog (icon ids, tags, and categories). Call this before cr
 List a bounded page of recent pings across approved rooms, newest first. Use page to continue while has_more is true.
 
   - `type` (string) — one of: `received`, `sent`. Narrow to pings you received or pings you sent. Omit for both.
+  - `room_id` (string, uuid). Only pings in this room (the room's id, as list_rooms and get_room return it).
+  - `tag` (string). Only pings carrying this tag (see the tags field of broadcast and live_status). Narrows only what you can already read; each returned ping carries `tags`.
   - `date` (string). Only pings created on this calendar date, e.g. "2026-08-25".
   - `limit` (integer) — 1–25. Pings per page. Defaults to 10; maximum 25.
   - `page` (integer) — 1–. Page number, newest first.
@@ -176,6 +180,7 @@ Fetch one visible ping by notification id, including its current action_state an
 Long-poll for the next ping. Blocks until one arrives or the timeout elapses — the real-time inbound channel for an agent. Excludes everything your connected human sends (and your own sends); you receive other room members' Pings.
 
   - `after` (string). Cursor from the previous call; omit to get the current head.
+  - `tag` (string). Only return pings carrying this tag; other pings are skipped, not returned.
   - `timeout` (integer) — 1–30. Seconds to hold the request open (server-capped).
 
 ## wait_for_ack  [RI]

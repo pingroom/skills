@@ -39,7 +39,7 @@ branch on. This skill pins `@pingroom/cli` to **0.13.0**.
 
 > **What the pinned 0.13.0 doesn't have.** The command reference below also covers
 > newer CLIs, so anything marked "CLI ≥ 0.14.0" or later won't work here. `pingroom ask --poll`
-> exits 2 with `Unknown option: --poll`, and `pingroom ping --idempotency-key` exits 2 the same way. `pingroom watch <id>` exits 0 on a **denied**
+> exits 2 with `Unknown option: --poll`, and `pingroom ping --idempotency-key` and `pingroom ping --tag` exit 2 the same way. `pingroom watch <id>` exits 0 on a **denied**
 > approval, so never use it to resume a gate; use `pingroom approval --wait`, which
 > exits 4 on deny.
 
@@ -245,6 +245,7 @@ pingroom ping -m "Confirm receipt" --require-ack --ack-mode all --ack-timeout 60
 pingroom ping -m "Weekly report" --attach report.md --attach data.zip
 pingroom ping -m "build 512 done" -d '{"commit":"abc123","branch":"main"}'
 pingroom ping -m "Deploy finished" --idempotency-key "deploy-512"   # a retry replays, never repeats
+pingroom ping -m "Deploy finished" --tag deploy --tag prod          # label it; find it with listen --tag
 ```
 
 Rules that bite:
@@ -259,6 +260,10 @@ Rules that bite:
 - `--urgent` is delivery-only; `--require-ack` is the confirmation loop. They
   compose. Don't send `--urgent` for routine events — it trains people to
   ignore the alarm that matters.
+- `--tag <tag>` (repeatable, ≤ 10) labels a ping so history can be filtered by
+  it later. A tag is 1–32 characters of lowercase letters, digits, `-` and `_`,
+  starting with a letter or digit; the CLI trims, lowercases and de-duplicates
+  them and refuses a bad one before sending. It works with a token or a webhook.
 - `-a <1-16>` attributes the ping to a quick-action slot (its icon + sound). Slots 5–16 exist only when the room owner has Pro and added those pages.
 - `--idempotency-key <key>` on `ping` takes the same rule as on `ask`. Retry
   with the same key and the server returns the first ping instead of sending
@@ -342,7 +347,9 @@ Templates: status · steps · progress (`--progress 0..1`) · metrics
 (`--metric label:value` ×3) · countdown (`--deadline-at epoch`,
 optional `--duration-seconds n` on start) · decision
 (`--prompt`, `--option v:label` ×4) · matchup (`--left`/`--right`/`--center`).
-The template is fixed at start; one stream per correlation id; **always end
+The template is fixed at start, and so are its `--tag` labels (`live start
+--tag deploy`; a later `update` or `end` refuses `--tag`); one stream per
+correlation id; **always end
 the stream** even on error paths — trap it:
 `trap 'pingroom live end --room CODE -c "$CID" --failed' ERR`.
 New streams are budgeted on free accounts; updates and the final ping are
@@ -355,6 +362,7 @@ at the end instead.
 ```bash
 pingroom listen               # long-poll new pings in your rooms, print as they land
 pingroom listen --once        # one poll cycle, then exit (cron-friendly)
+pingroom listen --tag deploy  # only pings carrying that tag (one tag)
 ```
 
 You hear what other room members send. Everything sent as the connected
@@ -416,7 +424,8 @@ still gets them, and `--out -` sends them to stdout on purpose.
 `--input-type`, the `actions trigger` detail flags, `actions layout` and
 `rooms create --location` need CLI ≥ 0.12.0; `ping --item` and
 `live start --duration-seconds` need CLI ≥ 0.13.0; `ask --poll` needs CLI
-≥ 0.14.0; `ping --idempotency-key` needs CLI ≥ 0.15.0. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
+≥ 0.14.0; `ping --idempotency-key` needs CLI ≥ 0.15.0; `ping --tag`,
+`live start --tag` and `listen --tag` need a CLI newer than 0.16.0. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
 prints "unknown command" or "Unknown option", the installed binary is older
 than these docs (check which executable is on `PATH` before retrying).
 
