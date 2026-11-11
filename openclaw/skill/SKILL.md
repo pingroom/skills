@@ -268,6 +268,14 @@ Rules that bite:
   `idempotency_in_progress` while the first one is still running, so retry with
   the same key. Requires CLI ≥ 0.15.0; with `--webhook`, a CLI newer than 0.15.1
   (0.15.x exits 2).
+- `--attach` does not retry safely. It uploads each file again on every
+  invocation, creating new attachment IDs, so a retry of `ping --attach` or
+  `actions trigger --attach` under the same `--idempotency-key` can return 409
+  `idempotency_conflict` instead of replaying the first ping. The CLI cannot
+  resend fixed attachment IDs. For a send that may be retried, use an existing
+  shareable `--url` or a message, and keep the exact request fields. After an
+  uncertain file send, check the original result before sending again; a new
+  key can create a duplicate.
 
 ## Questions — block a script on a human choice
 

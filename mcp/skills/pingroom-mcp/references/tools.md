@@ -144,7 +144,7 @@ Read back the current state of a live stream you created, so a restarted produce
 
 ## live_claim  [DI]
 
-Act on a "Who's on it?" request (a live_status stream with template "claim") as your human: "claim" takes an open request (anyone but its asker), "release" lets go of one you hold, "done" finishes it (its claimer, or its asker at any time) and "cancel" withdraws it (its asker, or a room owner or admin). Two claims at once have one winner: the other gets 409 claim_conflict with the current claim, naming who holds it. Repeating your own last action is a no-op that returns the same claim.
+Act on a "Who's on it?" request (a live_status stream with template "claim") as your human: "claim" takes an open request (anyone but its asker), "release" lets go of one you hold, "done" finishes it (its claimer, or its asker at any time) and "cancel" withdraws it (its asker, or a room owner or admin). Two claims at once have one winner: the other gets 409 claim_conflict with the current claim, naming who holds it. Repeating your own last action is a no-op that returns the same claim. "release" returns the request to open only while it can still be taken: past its deadline (or 4 hours after it was made, when it has none) it ends the request as expired instead, a normal 200 whose claim.status is "expired" and whose state is "failed" (the asker hears "No one took it"), not an error.
 
   - `invite_code` (string) **(required)**. Room invite code.
   - `notification_id` (string) **(required)**. The request's notification id, from list_notifications or the live_status response.
@@ -180,7 +180,7 @@ Long-poll for the next ping. Blocks until one arrives or the timeout elapses —
 
 ## wait_for_ack  [RI]
 
-Long-poll a generic acknowledgement-required ping until an eligible recipient acknowledges it, it expires, or the timeout elapses. Questions use wait_for_answer instead.
+Long-poll a generic acknowledgement-required ping until its confirmation rule is met (any: first confirmation; all: every original eligible recipient), it expires, or the timeout elapses. Questions use wait_for_answer instead.
 
   - `notification_id` (string) **(required)**. Room notification id.
   - `timeout` (integer) — 0–30. Seconds to hold the request open. Use 0 for an immediate authoritative state read.
