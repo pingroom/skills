@@ -204,8 +204,10 @@ answered question exits 0, but `approval --wait` exits 0 only on `approve`
 and 4 on `deny`. That is what makes the one-liner above a real gate rather
 than a prompt everyone passes. From CLI 0.14.0, `pingroom watch <id>` on an
 approve/deny question (an `approval`, or an `ask` with no `-o`) is the same
-gate: 0 on approve, 4 on deny or a tied poll, 3 expired. `ask --wait` still
-exits 0 on any answer.
+gate: 0 on approve, 4 on deny or a tied poll, 3 expired. From CLI 0.17.0,
+`ask --wait` with no `-o` is that gate too; before 0.17.0 it exits 0 on any
+answer, so gate with `approval --wait` there. A question with its own `-o`
+options exits 0 on any answer in every version.
 
 <!-- shared-body:start — verbatim copy of the same region in
      skills/cli/skills/pingroom-cli/SKILL.md. Edit there, then re-copy; the two
@@ -283,7 +285,7 @@ Rules that bite:
   error with `--replace-key`, `--action`, `--urgent`, `--require-ack`,
   `--ack-mode`, `--ack-timeout`, `--attach`, `--tag`, `--item` or
   `--idempotency-key`. It counts like a send against a free account's daily
-  allowance. Requires a CLI newer than 0.16.0.
+  allowance. Requires CLI ≥ 0.17.0.
 - `--replace-key <key>` (1–64 characters: letters, digits, `.` `_` `:` `-`) is
   for a script that cannot keep the id: with a token or a webhook, a send
   carrying the key replaces your earlier ping with the same key in that room
@@ -291,7 +293,7 @@ Rules that bite:
   replaceable, and prints `ping replaced`; otherwise it sends a new ping that
   keeps the key. A send that asks for something a replacement cannot do
   (`--require-ack`, `--urgent`, `--attach`, `--tag`, `--action`) always sends a
-  new ping. Requires a CLI newer than 0.16.0.
+  new ping. Requires CLI ≥ 0.17.0.
 - `--withdraw <ping-id>` takes back a ping you already sent (agent-token mode
   only, with `--room`; no `--message`): its notification is removed from each
   recipient's Lock Screen and Notification Center, and the ping stays in the room
@@ -305,7 +307,7 @@ Rules that bite:
   starts a new ping). Removal is best effort: a phone that is offline, has the app
   force-quit or restricts background activity keeps the notification until it
   next opens the app, and only recent builds of the iPhone and Android apps
-  remove it. Requires a CLI newer than 0.16.0.
+  remove it. Requires CLI ≥ 0.17.0.
 - `-a <1-16>` attributes the ping to a quick-action slot (its icon + sound). Slots 5–16 exist only when the room owner has Pro and added those pages.
 - Buttons (up to 3, token or webhook): `--action-url "Label=https://…"` opens a
   link (the app shows its host under the label); `--action-webhook
@@ -334,7 +336,7 @@ Rules that bite:
   once). Look the secret up by the body's `notification_id`, which is only a
   lookup key until the signature checks out. The body names who tapped only by
   `actor.id` (a pseudonym, different in every room) and `actor.display_name`.
-  Requires a CLI newer than 0.16.0.
+  Requires CLI ≥ 0.17.0.
 - `--idempotency-key <key>` on `ping` takes the same rule as on `ask`. Retry
   with the same key and the server returns the first ping instead of sending
   another; the same key with a changed request is a 409
@@ -494,13 +496,14 @@ pingroom attachment delete <id>
 Webhook creation and attachment upload are Pro. `--json` on any command prints
 the raw response for scripting. From CLI 0.14.0, `attachment get` without
 `--out` refuses to write the bytes to a terminal (exit 2); a pipe or redirect
-still gets them, and `--out -` sends them to stdout on purpose.
+still gets them, and `--out -` sends them to stdout on purpose. From CLI
+0.17.0 an existing `--out` path is replaced only with `--force`.
 `actions set-all` with `--set` or `--actions` requires CLI ≥ 0.10.2.
 `--input-type`, the `actions trigger` detail flags, `actions layout` and
 `rooms create --location` need CLI ≥ 0.12.0; `ping --item` and
 `live start --duration-seconds` need CLI ≥ 0.13.0; `ask --poll` needs CLI
 ≥ 0.14.0; `ping --idempotency-key` needs CLI ≥ 0.15.0; `ping --tag`,
-`live start --tag`, the `timer`, `value` and `stats` templates, `live --segments`, `listen --tag` and `metric` need a CLI newer than 0.16.0. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
+`live start --tag`, the `timer`, `value` and `stats` templates, `live --segments`, `listen --tag` and `metric` need CLI ≥ 0.17.0. Other management nouns need CLI ≥ 0.7.6 — if `pingroom rooms`
 prints "unknown command" or "Unknown option", the installed binary is older
 than these docs (check which executable is on `PATH` before retrying).
 
