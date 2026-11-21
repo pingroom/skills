@@ -457,7 +457,7 @@ pipeline should hold no account credential at all.
 ## Installing these skills elsewhere
 
 `pingroom skills` lists both published skills and every way to install them;
-`pingroom skills install` copies them into `~/.claude/skills` (needs `git`).
+`pingroom skills install` copies them into `~/.claude/skills`.
 It refuses to replace a skill that is already installed — pass `--force` for
 that, or `--dir <path>` to install somewhere else. Requires CLI >= 0.8.0.
 
