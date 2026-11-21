@@ -26,7 +26,7 @@ it in your browser and choose which rooms its robot can access. There is no
 MCP server to run locally and no API key to paste into your client.
 
 **Included:** the [PingRoom MCP skill](skills/pingroom-mcp/SKILL.md),
-a [47-tool reference](skills/pingroom-mcp/references/tools.md), and plugin
+a [48-tool reference](skills/pingroom-mcp/references/tools.md), and plugin
 configurations for Claude Code, Grok Build, and Cursor.
 
 ## Table of contents
@@ -117,7 +117,9 @@ retries without duplicate pings. Exact parameters live in the
 
 Claude Code and Grok Build plugins include it; the Cursor manifest points to
 the same file. Adding only the MCP URL exposes the tools but does not install
-the skill. For manual and CLI-based skill installation, see the
+the skill; the server's `get_guide` tool then serves the same two files, and
+its `instructions` tell the agent to call it before the first send. For manual
+and CLI-based skill installation, see the
 [repository install guide](../README.md#install).
 
 ## Connection and permissions

@@ -1,6 +1,6 @@
 # PingRoom MCP — complete tool reference
 
-Matches the public server registry in source (47 tools). To fetch the live
+Matches the public server registry in source (48 tools). To fetch the live
 catalog, POST `{"jsonrpc":"2.0","id":1,"method":"tools/list"}` to
 https://api.pingroom.io/api/agent/mcp. Every tool call is `tools/call`; in Claude Code the tools
 surface as `mcp__pingroom__<name>` when the server was added directly, or as
@@ -43,6 +43,18 @@ and reconnect guidance in `message`. Subsequent calls with that credential are
 rejected, including a repeated disconnect; refresh cannot restore it.
 
   (no arguments)
+
+## get_guide  [RI]
+
+Return this skill as Markdown, for a client that has no PingRoom skill
+installed. Call it once before your first send. `topic` `overview` (the
+default) is the skill itself: which tool to reach for, verifying the
+connection, every kind of Ping, questions, approvals, handoffs, live progress,
+errors and tone. `topic` `tools` is this reference. The result carries
+`content` (the Markdown), `topics` (what you can ask for) and `source` (the
+skill's repository, for clients that install skills).
+
+  - `topic` (string) — one of: `overview`, `tools`. Defaults to `overview`.
 
 ## list_rooms  [RI]
 
