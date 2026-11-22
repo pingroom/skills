@@ -89,7 +89,10 @@ pingroom skills install
 ```
 
 Installs both into `~/.claude/skills/`. Add `--force` to replace skills already
-there, or `--dir <path>` to install elsewhere.
+there, or `--dir <path>` to install elsewhere. From CLI 0.18.0 it copies the
+skills bundled in the CLI, so it needs no Git; `--latest` fetches the newest from
+GitHub instead. `pingroom skills show` prints a skill to stdout without
+installing anything.
 
 ### By hand
 
