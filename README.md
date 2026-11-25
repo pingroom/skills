@@ -178,7 +178,7 @@ claude mcp add --transport http pingroom https://api.pingroom.io/api/agent/mcp
 ```
 
 The `pingroom-cli` skill needs a paired CLI: `npm i -g @pingroom/cli && pingroom`.
-The public MCP catalog contains 48 tools. New connections receive the single
+The public MCP catalog contains 49 tools. New connections receive the single
 `pingroom:full` consent grant, which expands to the server's 20 internal
 permissions, including changes to the robot's profile. If a legacy credential
 reports `insufficient_scope`, reconnect through that client's authorization
