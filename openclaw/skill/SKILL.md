@@ -424,6 +424,22 @@ timer (counts up from `--started-at epoch`, default now; update at least every
 15 minutes or it is ended as stale) · value (`--value`, `--value-label`,
 `--delta`, `--trend up|down|flat`) · stats (`--stat "Label=Value"` ×4–8).
 An older app shows the status layout with the server-written message.
+
+Not every surface offers every template. A person in the app or on the web
+picks from fewer; timer, value and stats start only from your terminal (or MCP,
+an SDK, the API):
+
+| Template | Phone app (iPhone, Android) | Web app | Your terminal (CLI), MCP, SDKs, API |
+|---|---|---|---|
+| Status, Steps, Countdown, Matchup | yes | yes | yes |
+| Decision (`question`; the CLI also takes `decision`) | yes¹ | yes¹ | yes |
+| Who's on it? (`claim`) | yes² | yes² | yes² |
+| Progress, Metrics | no | yes | yes |
+| Timer, Value, Stats | no | no | yes |
+
+¹ Only while the operator has Questions enabled. ² Private standard rooms only:
+public and personal rooms refuse it (`claim_private_rooms_only`).
+
 The template is fixed at start, and so are its `--tag` labels (`live start
 --tag deploy`; a later `update` or `end` refuses `--tag`); one stream per
 correlation id; **always end
@@ -493,7 +509,10 @@ pingroom attachment get <id> --out - | sha256sum   # bytes to stdout (CLI ≥ 0.
 pingroom attachment delete <id>
 ```
 
-Webhook creation and attachment upload are Pro. `--json` on any command prints
+Attachment upload is Pro. A free account keeps one enabled incoming webhook
+across the rooms it owns: `webhooks create` for a second enabled one is
+refused with `pro_feature_required`, naming the room that holds the slot (pass
+`--enabled false` to create it switched off). Pro lifts that cap. `--json` on any command prints
 the raw response for scripting. From CLI 0.14.0, `attachment get` without
 `--out` refuses to write the bytes to a terminal (exit 2); a pipe or redirect
 still gets them, and `--out -` sends them to stdout on purpose. From CLI
@@ -577,9 +596,11 @@ not need a shorter TTL. Two rules:
   optional channel plugin (≥ 0.1.2), use `/pingroom activate` in chat instead;
   that command uses the plugin credential. Installing the app alone does not
   show that the phone is ready.
-- `403`/`402 pro_required` — attachments and webhook management need this
-  account on Pro; quick ping slots 5–16 and `actions layout` need the room
-  owner on Pro.
+- `403`/`402 pro_required` — attachment uploads need this account on Pro;
+  quick ping slots 5–16 and `actions layout` need the room owner on Pro.
+- `402 pro_feature_required` on `webhooks create` / `webhooks update` — the
+  free account already has its one enabled incoming webhook; the message names
+  its room. Tell the human: turn that one off or upgrade. Don't retry.
 - `422 quick_action_input_required` — that Ping needs a detail: read
   `pingroom actions list` for its input type and retry with `--location`,
   `--url` or `--attach` (`quick_action_input_type` = wrong attachment type).
@@ -587,19 +608,19 @@ not need a shorter TTL. Two rules:
   it with `actions set` or choose another slot.
 - `409 quick_action_layout_changed` — the pages moved since they were read;
   re-run `pingroom actions list` and retry.
-- `--replace` refused — `403 not_ping_owner` / `404 notification_not_found`: only
-  the token that sent a ping can replace it, in the room you named.
+- `--replace` refused — `403 not_ping_owner`: only the token that sent a ping
+  can replace it. `404 notification_not_found`: no ping with that id in the
+  room you named (a wrong id, or a ping sent to another room). A 404 with no
+  code means no room has that code.
   `409 replace_window_closed` / `409 replace_limit_reached`: the ping is 24
   hours old or already replaced 20 times; send a new ping (with `--replace-key`
   the next send starts one by itself). `422 unsupported_room`,
   `unsupported_question`, `unsupported_handoff`, `unsupported_live_status`,
   `unsupported_claim`, `unsupported_ack`, `unsupported_checklist`,
-  `unsupported_source`: that ping cannot be replaced. A bare 404 with no code
-  means the server has not switched replacing on yet. `409 ping_withdrawn`: the
+  `unsupported_source`: that ping cannot be replaced. `409 ping_withdrawn`: the
   ping was taken back with `--withdraw`; send a new one.
 - `--withdraw` refused — the same codes as `--replace`, except the window is
-  `409 withdraw_window_closed` (24 hours). A bare 404 with no code means the
-  server has not switched withdrawing on yet.
+  `409 withdraw_window_closed` (24 hours).
 - `413 payload_too_large` — attachments are 5 MiB each, at most 4 per ping.
 - `pingroom logout` only clears the local file; the server-side credential stays
   live. Revoke it under Connected Agents, or let the labeled pairing command do it.

@@ -125,10 +125,12 @@ PingRoom user ids allowed to talk to the agent, or explicitly choose `open`.
 Questions still accept the paired human's answer. The poll feed excludes the
 bound human's own ordinary sends and machine-generated traffic.
 
-**Webhooks (optional, Pro).** With `webhook.enabled` the plugin registers a
+**Webhooks (optional).** With `webhook.enabled` the plugin registers a
 gateway route at `/pingroom/events` (override with `webhook.path`). Set
 `webhook.secret` to the outgoing webhook's signing secret and configure that
-webhook in PingRoom to deliver to the gateway URL. The route verifies HMAC-v2
+webhook in PingRoom to deliver to the gateway URL (a free account keeps one
+outgoing webhook switched on across the rooms it owns; Pro gives every room its
+own). The route verifies HMAC-v2
 (or legacy HMAC-v1), then reads the authoritative record before dispatching.
 Polling keeps running either way. The gateway must be reachable by PingRoom.
 
