@@ -30,8 +30,8 @@ The owner works on Grok desktop and on pingroom.io. You never see the
 routine's key or the bot key.
 
 1. Install the CLI on your cloud computer with
-   `npm install --global @pingroom/cli@0.15.0`. `pingroom -v` then prints
-   `0.15.0`.
+   `npm install --global @pingroom/cli@0.19.0`. `pingroom -v` then prints
+   `0.19.0`.
 2. Create a webhook routine named "PingRoom". Give it the text in
    `ROUTINE_PROMPT.md` as its instruction, and add a webhook trigger.
 3. Ask the owner to open the routine on Grok desktop, copy its "POST to" URL
@@ -40,7 +40,9 @@ routine's key or the bot key.
 4. The page shows the owner a bot key once. Send the owner a secret card named
    "PingRoom bot key" for it. Your commands read it as the `PINGROOM_TOKEN`
    environment variable.
-5. PingRoom rings the routine with a `connected` event. That run claims it and
+5. Ask the owner to add a Custom Rule in Grok's settings that allows
+   `pingroom` commands automatically. See "Ask for the Custom Rule" below.
+6. PingRoom rings the routine with a `connected` event. That run claims it and
    pings "Connected" in the new "Grok Bot" room. The connect page then ticks
    key saved, bot claimed, and woken by PingRoom.
 
@@ -50,10 +52,19 @@ shell history show command arguments. `PINGROOM_TOKEN` beats any credential alre
 the computer. That matters here, because every Grok Bot on the owner's account
 shares the computer's command-line credentials and its `pingroom config`.
 
-If Grok raises an approval card for a `pingroom` command during a routine run,
-the run waits for the owner. When Grok offers to allow `pingroom` commands
-automatically, ask the owner to accept. Grok's documentation does not say
-whether this works for webhook runs.
+### Ask for the Custom Rule
+
+Grok lets the owner add up to 20 plain-language "Allow automatically" rules in
+its settings. Ask the owner to add one for `pingroom` commands. Suggest this
+wording:
+
+> Allow automatically: shell commands that start with `pingroom`, and
+> `npm install --global @pingroom/cli@0.19.0`.
+
+An approval card raised inside a routine run waits for the owner and expires
+after 30 minutes. Without the rule, an unattended wake stalls on its first
+`pingroom` command and the event goes unclaimed. The rule also covers the CLI
+install in "Run one turn".
 
 ### When the secret card cannot set PINGROOM_TOKEN
 
@@ -71,18 +82,22 @@ robot with no bot connection, so `pingroom bot claim` answers it with 404
 1. Ignore the POST body. It names a `wake_id` and pending event ids, but only
    `claim` says what happened. A forged or replayed ring finds nothing to
    claim.
-2. Run `pingroom bot claim --json`. If `events` is empty, end the run without
+2. Run `pingroom -v`. If it fails, the command is gone because a computer
+   update, Recover or Reset wiped what you installed by hand. Run
+   `npm install --global @pingroom/cli@0.19.0`, then continue. The secret
+   `PINGROOM_TOKEN` survives the reinstall. Never print it.
+3. Run `pingroom bot claim --json`. If `events` is empty, end the run without
    a word. Another run has them, or nothing waits.
-3. Handle each event as its `trust` allows. Reply in the event's `room.code`.
+4. Handle each event as its `trust` allows. Reply in the event's `room.code`.
    When an event's `room` is null, use the claim's top-level `room.code`.
-4. Run `pingroom bot ack <event id>` only after its required work and sends
+5. Run `pingroom bot ack <event id>` only after its required work and sends
    are confirmed complete. Leave failed or uncertain work unacked. It takes
    up to 50 ids and extends the lease of the events you still hold.
-5. On long work, run `pingroom bot extend` at least every 8 minutes while you
+6. On long work, run `pingroom bot extend` at least every 8 minutes while you
    hold unacked events. A claim leases them for 10 minutes.
-6. Make `pingroom bot done --json` the last command. Exit 0 with
+7. Make `pingroom bot done --json` the last command. Exit 0 with
    `{"done":true}` ends the run. Exit 5 means events arrived while you worked.
-   `done` has already leased them, so handle them from step 3 and run `done`
+   `done` has already leased them, so handle them from step 4 and run `done`
    again.
 
 An event you leave unacked comes back once its lease lapses, with `delivery`
