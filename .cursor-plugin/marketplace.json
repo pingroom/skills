@@ -10,7 +10,12 @@
     {
       "name": "pingroom-mcp",
       "source": "mcp",
-      "category": "productivity"
+      "description": "Reach a human through PingRoom: phone notifications, questions, approvals, handoffs, and live progress over the hosted MCP connector."
+    },
+    {
+      "name": "pingroom-grok-bot",
+      "source": "grok-bot",
+      "description": "Let PingRoom wake your Grok Bot when you act on your phone, with the skills for its mailbox, approvals and Live Activities."
     }
   ]
 }

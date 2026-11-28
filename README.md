@@ -5,7 +5,7 @@ Ready-to-install skills for reaching humans through
 handoffs, and lock-screen live progress. Two are plugins and install in both
 [Claude Code](https://code.claude.com/docs) and
 [Grok Build](https://docs.x.ai/build/overview); the third is for
-[OpenClaw](https://docs.openclaw.ai). The fourth runs inside a Grok Bot routine
+[OpenClaw](https://docs.openclaw.ai). The last two run inside a Grok Bot routine
 that PingRoom wakes.
 
 **Start here:** [CLI overview and examples](https://github.com/pingroom/cli#use-cases)
@@ -16,7 +16,8 @@ that PingRoom wakes.
 | [`pingroom-mcp`](mcp/skills/pingroom-mcp/SKILL.md) | The hosted MCP connector (`https://api.pingroom.io/api/agent/mcp`) — conversational agents: verify connection identity; disconnect before switching accounts; retain a latest-pings feed URL; send pings with locations, links, structured data, and small attachments; ask questions; gate on approvals; hand decisions to your human; drive live-progress cards. Includes a full 48-tool reference from the public MCP registry; a client without the skill reads both through the `get_guide` tool. |
 | [`pingroom-cli`](cli/skills/pingroom-cli/SKILL.md) | The [`@pingroom/cli`](https://www.npmjs.com/package/@pingroom/cli) — shells, CI, and Claude Code hooks: attachments up to 5 MiB, exit-code gates on human answers, room/webhook/quick-action management. |
 | [`pingroom`](openclaw/skill/SKILL.md) (OpenClaw) | The same CLI, packaged for [OpenClaw](https://docs.openclaw.ai) agents: headless pairing with `pingroom pair`, `skills.entries` credential wiring, and the sandbox caveat. Not a Claude Code plugin — see [Install for OpenClaw](#for-openclaw). |
-| [`pingroom-grok-bot`](grok-bot/skills/pingroom-grok-bot/SKILL.md) (Grok Bot) | A Grok Bot routine that PingRoom wakes when its owner acts: the `pingroom bot` claim, ack and done loop, what each event's trust allows, approvals, and one Live Activity per task. Its [routine prompt](grok-bot/skills/pingroom-grok-bot/ROUTINE_PROMPT.md) is the routine's instruction. Needs CLI 0.15.0 and a bot connection made at `pingroom.io/app/agents/grok`. Not a Claude Code plugin. |
+| [`pingroom-grok-bot`](grok-bot/skills/pingroom-grok-bot/SKILL.md) (Grok Bot) | A Grok Bot routine that PingRoom wakes when its owner acts: the `pingroom bot` claim, ack and done loop, what each event's trust allows, approvals, and one Live Activity per task. Its [routine prompt](grok-bot/skills/pingroom-grok-bot/ROUTINE_PROMPT.md) is the routine's instruction. Needs CLI 0.15.0, a bot connection made at `pingroom.io/app/agents/grok`, and the bot key in a secret card. Not a Claude Code plugin. |
+| [`pingroom-grok-bot-mcp`](grok-bot/skills/pingroom-grok-bot-mcp/SKILL.md) (Grok Bot) | The same routine through the hosted MCP connector instead of the CLI: `bot_claim`, `bot_ack` and `bot_done` tools, the same trust rules, and safe retries with `replace_key`. Its own [routine prompt](grok-bot/skills/pingroom-grok-bot-mcp/ROUTINE_PROMPT.md). Needs a bot connection and a custom connector whose `Authorization` header is `Bearer <bot key>`. No CLI, no secret card. Not a Claude Code plugin. |
 
 The first two are Claude Code siblings and cross-reference each other: the MCP
 skill defers to the CLI one for shell work, and the CLI skill defers to MCP for
@@ -80,6 +81,28 @@ Local plugin imports must be enabled by your team if they are restricted.
 The repository's `.cursor-plugin/marketplace.json` exposes the same plugin for
 Cursor's repository import. Marketplace availability depends on review; the
 manifest alone does not publish a listing. [Cursor plugin documentation](https://cursor.com/docs/plugins).
+
+### For Grok Bot
+
+Both Grok Bot skills need a bot connection. The owner pastes the Grok webhook
+routine's URL and key at `https://pingroom.io/app/agents/grok` and gets a bot
+key once. They differ in how the Bot reaches PingRoom.
+
+| Path | The Bot needs | Skill |
+|---|---|---|
+| CLI | `@pingroom/cli` on its cloud computer, and the bot key in a secret card as `PINGROOM_TOKEN` | `pingroom-grok-bot` |
+| MCP connector | a custom connector, Server URL `https://api.pingroom.io/api/agent/mcp`, header `Authorization: Bearer <bot key>`, typed by the owner into Grok's connector settings | `pingroom-grok-bot-mcp` |
+
+Only the bot key reaches the mailbox. The five mailbox tools (`bot_claim`,
+`bot_ack`, `bot_extend`, `bot_done`, `bot_peek`) are listed for that key and no
+other credential. A connector that signs in with OAuth, the plugin's included,
+is an ordinary PingRoom robot. It never sees the mailbox tools, and PingRoom
+never wakes the Bot for it.
+
+`grok-bot/` is also a Cursor Marketplace plugin, `pingroom-grok-bot`, which
+installs both skills and declares the hosted MCP server by URL. It is not
+submitted or listed yet. Its manifest hides it from Cursor itself
+(`minClientVersions.cursor: "never"`), since only a Grok Bot can use it.
 
 ### With the PingRoom CLI
 
@@ -229,7 +252,7 @@ manifest, so there is no second Grok-specific copy to keep in lockstep:
 
 ```
 .claude-plugin/marketplace.json   both plugins, for /plugin marketplace add
-.cursor-plugin/marketplace.json   hosted MCP plugin, for Cursor repository import
+.cursor-plugin/marketplace.json   hosted MCP and Grok Bot plugins, for the Cursor Marketplace
 mcp/
   .claude-plugin/plugin.json     also declares the hosted MCP server
   .cursor-plugin/plugin.json     points to the same skill and MCP configuration
@@ -244,16 +267,23 @@ openclaw/
   skill/runtime/package.json    exact CLI dependency for the reviewed skill
   skill/runtime/package-lock.json  locked tarballs and SHA-512 integrity
 grok-bot/
-  skills/pingroom-grok-bot/SKILL.md            Grok Bot skill, no plugin.json
-  skills/pingroom-grok-bot/ROUTINE_PROMPT.md   the routine's instruction
+  .cursor-plugin/plugin.json                       Cursor Marketplace manifest, no .claude-plugin
+  mcp.json                                         the hosted server, by URL only
+  skills/pingroom-grok-bot/SKILL.md                Grok Bot over the CLI
+  skills/pingroom-grok-bot/ROUTINE_PROMPT.md       its routine's instruction
+  skills/pingroom-grok-bot-mcp/SKILL.md            Grok Bot over the MCP connector
+  skills/pingroom-grok-bot-mcp/ROUTINE_PROMPT.md   its routine's instruction
 ```
 
 `openclaw/` is deliberately outside `marketplace.json`: OpenClaw has no
 `plugin.json`, and listing it as a Claude Code plugin would install a second,
-near-identical skill beside `pingroom-cli`. `grok-bot/` stays out for a
-different reason. Its skill runs inside a Grok Bot routine holding a bot key,
-and a Claude Code session has neither. Its routine prompt is the same text
-PingRoom's connect page offers to copy, so the two change together.
+near-identical skill beside `pingroom-cli`. `grok-bot/` stays out of
+`.claude-plugin/marketplace.json` for a different reason. Its skills run inside a Grok Bot routine holding a bot key,
+and a Claude Code session has neither. The CLI skill's routine prompt is the
+same text PingRoom's connect page offers to copy, so the two change together.
+The two Grok Bot skills each stand alone, because a Bot may have only one, and
+share their event shapes and trust rules in marked `grok-shared` regions that
+`knowledge/tools/check-lockstep.mjs` compares byte for byte.
 
 ## More
 

@@ -1,0 +1,29 @@
+{
+  "name": "pingroom-grok-bot",
+  "displayName": "PingRoom for Grok Bot",
+  "description": "Let PingRoom wake your Grok Bot when you act on your phone. The Bot reads your messages, taps and answers from its mailbox, asks before acting, and shows one lock-screen Live Activity per task.",
+  "version": "0.1.0",
+  "minClientVersions": {
+    "cursor": "never"
+  },
+  "author": {
+    "name": "PingRoom"
+  },
+  "publisher": "PingRoom",
+  "homepage": "https://pingroom.io/app/agents/grok",
+  "repository": "https://github.com/pingroom/skills",
+  "license": "MIT",
+  "category": "productivity",
+  "keywords": [
+    "pingroom",
+    "grok",
+    "grok-bot",
+    "mcp",
+    "notifications",
+    "human-in-the-loop",
+    "approvals",
+    "live-activity"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json"
+}
